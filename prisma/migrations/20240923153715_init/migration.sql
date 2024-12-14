@@ -1,0 +1,14 @@
+-- AlterTable
+ALTER TABLE "Author" ALTER COLUMN "handphoneNum" SET DEFAULT '',
+ALTER COLUMN "authorPhoto" DROP NOT NULL,
+ALTER COLUMN "authorPhoto" SET DEFAULT '',
+ALTER COLUMN "bank" SET DEFAULT '',
+ALTER COLUMN "accountBank" SET DEFAULT '',
+ALTER COLUMN "profit" SET DEFAULT 0,
+ALTER COLUMN "isApproved" SET DEFAULT false;
+
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "isApproved" BOOLEAN NOT NULL DEFAULT true,
+ALTER COLUMN "adsBalance" SET DEFAULT 0,
+ALTER COLUMN "userPhoto" DROP NOT NULL,
+ALTER COLUMN "userPhoto" SET DEFAULT '';

@@ -1,0 +1,186 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL") // uses connection pooling
+}
+
+model Test {
+  id                String        @id @default(cuid())
+  authorId         String
+  category         Category
+  title            String
+  testDescription  String
+  price            Decimal
+  similarity       Decimal
+  worktime         Int
+  review           String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  author           Author        @relation(fields: [authorId], references: [id])
+  multiplechoice   Multiplechoice[]
+  favourite        Favourite[]
+  history          History[]
+  result           Result[]
+  transaction      Transaction[]
+}
+
+model History {
+  id        String       @id @default(cuid())
+  testId    String
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  test      Test         @relation(fields: [testId], references: [id])
+}
+
+model User {
+  id                String          @id @default(cuid())
+  name              String
+  email             String          @unique
+  password          String
+  role              Role            @default(USER)
+  userPhoto         String?         @default("")
+  adsBalance        Decimal         @default(0)
+  isApproved        Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  favourite        Favourite[]
+  history          History[]
+  result           Result[]
+  testimoni        Testimoni[]
+  author           Author[]
+  revokedTokens    RevokedToken[]
+
+}
+
+model Author {
+  id                String        @id @default(cuid())
+  userId           String
+  name              String
+  handphoneNum     String         @default("")
+  authorPhoto       String?       @default("")
+  bank              String         @default("")
+  accountBank      String         @default("")
+  profit           Int            @default(0)
+  isApproved        Boolean       @default(false)
+  user              User          @relation(fields: [userId], references: [id])
+  test              Test[]
+}
+
+model Favourite {
+  id                String       @id @default(cuid())
+  testId           String
+  userId           String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  user             User         @relation(fields: [userId], references: [id])
+  test             Test         @relation(fields: [testId], references: [id])
+}
+
+model Multiplechoice {
+  id                String       @id @default(cuid())
+  testId           String
+  question         String
+  number           Int
+  questionPhoto    String
+  weight           Int
+  discussion       String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  test             Test         @relation(fields: [testId], references: [id])
+  option           Option[]
+}
+
+model Result {
+  id                String       @id @default(cuid())
+  testId           String
+  userId           String
+  score             Int
+  attemptNumber     Int
+  user             User         @relation(fields: [userId], references: [id])
+  test             Test         @relation(fields: [testId], references: [id])
+  detail_result    Detail_result[]
+  @@unique([testId, userId, attemptNumber])
+}
+
+model Detail_result {
+  id                String       @id @default(cuid())
+  optionId         String
+  resultId         String
+  userAnswer       String
+  status       String   @default("draft") // menambahkan kolom ini untuk menandai status draft atau final
+  result       Result?  @relation(fields: [resultId], references: [id])
+  option           Option       @relation(fields: [optionId], references: [id])
+
+  @@unique([optionId, resultId])
+}
+
+enum OptionLabel {
+  A
+  B
+  C
+  D
+}
+
+
+model Option {
+  id                String       @id @default(cuid())
+  multiplechoiceId String
+  optionDescription String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  isCorrect        Boolean
+  multiplechoice    Multiplechoice @relation(fields: [multiplechoiceId], references: [id])
+  detail_result     Detail_result[]
+}
+
+// Enum untuk status transaksi
+enum TransactionStatus {
+  unpaid
+  pending
+  success
+}
+
+// Model Transaksi
+model Transaction {
+  id             String            @id @default(cuid())
+  testId         String
+  paymentMethod  String
+  paymentTime    DateTime          @default(now())
+  total          Int
+  status         TransactionStatus
+  test           Test              @relation(fields: [testId], references: [id])
+}
+
+
+model Testimoni {
+  id                String       @id @default(cuid())
+  userId           String
+  comment          String
+  user             User         @relation(fields: [userId], references: [id])
+}
+
+model RevokedToken {
+  id                Int          @id @default(autoincrement())
+  token             String       @unique
+  createdAt        DateTime      @default(now())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade) // Relasi ke User
+}
+
+enum Role {
+  USER
+  ADMIN
+  AUTHOR
+}
+
+enum Category {
+  CPNS
+  UTBK
+  Pemrograman
+  Psikotes
+}
