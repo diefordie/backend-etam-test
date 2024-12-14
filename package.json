@@ -5,17 +5,16 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
-    "build": "prisma generate"
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@prisma/client": "^5.20.0",
+    "@google-cloud/storage": "^7.14.0",
+    "@prisma/client": "^5.22.0",
+    "backend": "file:",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
@@ -25,17 +24,21 @@
     "express-validator": "^7.2.0",
     "firebase": "^10.13.2",
     "firebase-admin": "^12.5.0",
-    "helmet": "^4.6.0",
-    "jsonwebtoken": "^8.5.1",
+    "fs": "^0.0.1-security",
+    "jwt-decode": "^4.0.0",
+    "midtrans-client": "^1.3.1",
+    "multer": "^1.4.5-lts.1",
+    "next": "^14.2.13",
     "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.16",
+    "path": "^0.12.7",
+    "pdfkit": "^0.15.0",
     "pg": "^8.13.0",
-    "winston": "^3.3.3"
+    "punycode": "^2.3.1",
+    "scrypt-kdf": "^3.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.7",
     "prisma": "^5.19.1"
-  },
-  "engines": {
-    "node": ">=14.0.0"
   }
 }
