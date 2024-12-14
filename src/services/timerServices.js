@@ -2,41 +2,51 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Helper function untuk konversi detik ke jam, menit, dan detik
+function convertSecondsToTime(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  return { hours, minutes, seconds: remainingSeconds };
+}
+
 export async function getWorktimeByTestId(testId) {
   try {
+    // Ambil data worktime dari database berdasarkan testId
     const test = await prisma.test.findUnique({
-      where: {
-        id: testId,
-      },
-      select: {
-        worktime: true, // Mengambil worktime dari test
-      },
+      where: { id: testId },
+      select: { worktime: true },
     });
 
-    if (!test) {
-      throw new Error('Test not found');
+    // Validasi jika data worktime tidak ada atau bernilai tidak valid
+    if (!test || test.worktime === null || test.worktime <= 0) {
+      throw new Error('Invalid or missing worktime data');
     }
 
-    // Menghitung waktu akhir berdasarkan waktu kerja (diasumsikan dalam detik)
-    const worktimeInSeconds = test.worktime;
-    const currentTimeInSeconds = Math.floor(Date.now() / 1000); // Waktu saat ini dalam detik
-    const endTimeInSeconds = currentTimeInSeconds + worktimeInSeconds; // Waktu akhir
+    // Konversi worktime dari menit ke detik
+    const worktimeInSeconds = test.worktime * 60;
 
-    // Hitung waktu yang tersisa
+    // Ambil waktu saat ini dalam detik
+    const currentTimeInSeconds = Math.floor(Date.now() / 1000);
+
+    // Waktu akhir dihitung dari waktu saat ini + worktime dalam detik
+    const endTimeInSeconds = currentTimeInSeconds + worktimeInSeconds;
+
+    // Hitung waktu tersisa dalam detik
     const remainingTimeInSeconds = endTimeInSeconds - currentTimeInSeconds;
 
+    // Jika waktu habis, kembalikan nilai 0
     if (remainingTimeInSeconds <= 0) {
-      // Jika waktu telah habis
-      return { hours: 0, minutes: 0, seconds: 0 };
+      return { hours: 0, minutes: 0, seconds: 0 }; 
     }
 
-    // Menghitung jam, menit, dan detik yang tersisa
-    const hours = Math.floor((remainingTimeInSeconds % 3600) / 60);
-    const minutes = Math.floor(remainingTimeInSeconds / 3600);
-    const seconds = remainingTimeInSeconds % 60;
+    // Gunakan helper function untuk konversi detik ke waktu
+    return convertSecondsToTime(remainingTimeInSeconds);
 
-    return { hours, minutes, seconds };
   } catch (error) {
-    throw new Error(`Error fetching worktime: ${error.message}`);
+    // Menangani error dan memberikan pesan yang lebih jelas
+    throw new Error(`Error fetching worktime for testId ${testId}: ${error.message}`);
   }
 }
+  

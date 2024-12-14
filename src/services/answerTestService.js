@@ -21,29 +21,35 @@ export const saveDraftAnswer = async (testId, token, answers) => {
 
     let result;
     try {
-        // 2. Cari result berdasarkan testId dan userId yang aktif
+        // 2. Cari result terakhir dengan status draft berdasarkan testId dan userId
         result = await prismaClient.result.findFirst({
-            where: { testId, userId },
-            orderBy: { attemptNumber: 'desc' }, // Urutkan berdasarkan attempt terbaru
+            where: { testId, userId, detail_result: { some: { status: 'draft' } } },
+            orderBy: { attemptNumber: 'desc' },
         });
 
+        // 3. Jika tidak ada result draft, buat result baru
         if (!result) {
-            // Jika tidak ada result sebelumnya, buat result baru dengan attempt pertama
+            const lastAttempt = await prismaClient.result.findFirst({
+                where: { testId, userId },
+                orderBy: { attemptNumber: 'desc' },
+            });
+            const attemptNumber = lastAttempt ? lastAttempt.attemptNumber + 1 : 1;
+
             result = await prismaClient.result.create({
                 data: {
                     testId,
                     userId,
-                    attemptNumber: 1, // Attempt pertama
-                    score: 0, // Skor awal diinisialisasi ke 0
+                    attemptNumber,
+                    score: 0,
                 },
             });
         }
     } catch (error) {
-        console.error('Error fetching or creating result:', error.message);
+        console.error('Error creating or fetching result:', error.message);
         throw new Error(`Gagal membuat atau mengambil result: ${error.message}`);
     }
 
-    // 3. Simpan atau perbarui detail jawaban
+    // 4. Simpan atau perbarui detail jawaban
     try {
         for (const answer of answers) {
             const existingDetail = await prismaClient.detail_result.findUnique({
@@ -56,16 +62,16 @@ export const saveDraftAnswer = async (testId, token, answers) => {
             });
 
             if (existingDetail) {
-                // Jika sudah ada jawaban untuk optionId ini, perbarui
+                // Perbarui jika sudah ada jawaban untuk optionId ini
                 await prismaClient.detail_result.update({
                     where: { id: existingDetail.id },
                     data: {
                         userAnswer: answer.selectedOption,
-                        status: 'draft', // Pastikan status tetap draft
+                        status: 'draft',
                     },
                 });
             } else {
-                // Jika belum ada, buat jawaban baru
+                // Buat baru jika belum ada jawaban untuk optionId ini
                 await prismaClient.detail_result.create({
                     data: {
                         optionId: answer.optionId,
@@ -83,6 +89,7 @@ export const saveDraftAnswer = async (testId, token, answers) => {
 
     return result.id; // Kembalikan resultId dari entri yang ditemukan atau dibuat
 };
+
 
 
 // Fungsi untuk memperbarui jawaban draft
@@ -128,7 +135,7 @@ export const updateDraftAnswer = async (resultId, oldOptionId, newOptionId, newA
 
 
 // Fungsi untuk mengirim jawaban final
-export const submitFinalAnswers = async (testId, token) => {
+export const submitFinalAnswers = async (resultId, token) => {
     let decodedToken;
     try {
         decodedToken = jwt.verify(token, JWT_SECRET);
@@ -140,12 +147,11 @@ export const submitFinalAnswers = async (testId, token) => {
     const userId = decodedToken.id;
 
     try {
-        console.log(`Processing submit for testId: ${testId}, userId: ${userId}`);
+        console.log(`Processing submit for resultId: ${resultId}, userId: ${userId}`);
 
-        // 1. Ambil entri result terbaru dengan kombinasi userId dan testId yang cocok
-        const existingResult = await prismaClient.result.findFirst({
-            where: { userId, testId },
-            orderBy: { attemptNumber: 'desc' },
+        // 1. Ambil entri result berdasarkan resultId
+        const existingResult = await prismaClient.result.findUnique({
+            where: { id: resultId },
             include: {
                 detail_result: {
                     where: { status: 'draft' },
@@ -160,13 +166,13 @@ export const submitFinalAnswers = async (testId, token) => {
 
         // 2. Validasi apakah result ditemukan dan memiliki jawaban draft
         if (!existingResult) {
-            console.warn(`Tidak ada result ditemukan untuk testId: ${testId}, userId: ${userId}`);
-            throw new Error('Tidak ada result yang ditemukan untuk tes ini.');
+            console.warn(`Tidak ada result ditemukan untuk resultId: ${resultId}, userId: ${userId}`);
+            throw new Error('Tidak ada result yang ditemukan.');
         }
 
         if (!existingResult.detail_result.length) {
-            console.warn(`Tidak ada jawaban draft ditemukan untuk testId: ${testId}, userId: ${userId}`);
-            throw new Error('Tidak ada jawaban draft yang ditemukan untuk tes ini.');
+            console.warn(`Tidak ada jawaban draft ditemukan untuk resultId: ${resultId}, userId: ${userId}`);
+            throw new Error('Tidak ada jawaban draft yang ditemukan untuk result ini.');
         }
 
         let totalScore = 0;
@@ -207,12 +213,24 @@ export const submitFinalAnswers = async (testId, token) => {
             data: { score: totalScore },
         });
 
+        // 6. Tambahkan entri ke tabel History
+        await prismaClient.history.create({
+            data: {
+                testId: existingResult.testId,
+                userId,
+            },
+        });
+
         return updatedResult;
     } catch (error) {
         console.error('Gagal memproses submit jawaban final:', error);
         throw new Error(`Gagal mengirim jawaban final: ${error.message}`);
     }
 };
+
+
+
+
 
 export const getAnswersByResultId = async (resultId) => {
     try {

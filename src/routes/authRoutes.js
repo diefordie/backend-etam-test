@@ -12,4 +12,6 @@ router.post('/login', login);
 // Route untuk logout
 router.post('/logout', logout);
 
+router.get('/verified-email');
+
 export default router;

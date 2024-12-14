@@ -20,3 +20,28 @@ export const loginAdminServices = async ({ email, password }) => {
         role: admin.role,
     };
 };
+export const getDashboardStats = async () => {
+  try {
+    const totalUsers = await prisma.user.count({
+      where: { role: 'USER' }
+    });
+
+    const totalAuthors = await prisma.author.count();
+
+    const totalPublishedTests = await prisma.test.count({
+      where: { 
+        // Assuming there's a 'status' field for tests. Adjust if needed.
+        isPublished: true
+      }
+    });
+
+    return {
+      totalUsers,
+      totalAuthors,
+      totalPublishedTests
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    throw new Error('Failed to fetch dashboard statistics');
+  }
+};

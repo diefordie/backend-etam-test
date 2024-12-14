@@ -379,6 +379,7 @@ async function main() {
   ];
 
   const categories = ['CPNS', 'UTBK', 'Pemrograman', 'Psikotes'];
+  const types = ['PilihanGanda', 'Essay'];
   const questionBank = {
     CPNS: cpnsQuestions,
     UTBK: utbkQuestions,
@@ -392,7 +393,7 @@ async function main() {
     for (let i = 1; i <= 3; i++) {
       const test = await prisma.test.create({
         data: {
-          authorId: 'cm2bwha730001l6s3ocd5c4nb', // Ganti dengan authorId yang sesuai
+          authorId: 'cm4o4mkqy0001azq832lrezac', // Ganti dengan authorId yang sesuai
           category: category,
           title: `${category} Test ${i}`,
           testDescription: `Ini adalah deskripsi untuk ${category} Test ${i}`,
@@ -400,6 +401,8 @@ async function main() {
           similarity: 90,
           worktime: 120,
           review: `Review untuk ${category} Test ${i}`,
+          isPublished: true,
+          type:"PilihanGanda",
         },
       });
 
@@ -413,6 +416,7 @@ async function main() {
         const multiplechoice = await prisma.multiplechoice.create({
           data: {
             testId: test.id,
+            pageName: "Halaman 1",
             question: questionData.question,
             number: j + 1,
             questionPhoto: '',
