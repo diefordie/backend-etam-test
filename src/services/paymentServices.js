@@ -30,8 +30,10 @@ class PaymentService {
         async createPaymentToken(testId, token) {
             try {
                 // Decode token to get userId
+                console.log('Token:', token);
                 const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
                 const userId = decodedToken.id;
+                console.log('User ID:', userId);    
     
                 const test = await prisma.test.findFirst({
                     where: { id: testId }
@@ -48,8 +50,8 @@ class PaymentService {
                         gross_amount: test.price,
                     },
                     callbacks: {
-                        finish: process.env.DOMAIN
-                    },
+                        finish: 'https://d149-2001-448a-6002-6c58-dc6e-d11c-1964-d04a.ngrok-free.app/user/thanks',
+                      },
                     enabled_payments: [
                         "mandiri_clicpay", "bca_clicpay", "bni_va", "bca_va",
                     ],
@@ -58,7 +60,7 @@ class PaymentService {
                 const transaction = await prisma.transaction.create({
                     data: {
                         testId,
-                        userId: userId,  // Now using the userId from the token
+                        userId: userId, 
                         paymentMethod: 'midtrans',
                         total: test.price,
                         paymentStatus: 'PENDING',

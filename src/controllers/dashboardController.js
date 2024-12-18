@@ -63,7 +63,7 @@ export const searchTestsByTitleAndCategory = async (req, res) => {
 export const getTestsByCategory = async (req, res) => {
   const { category } = req.query; // Get the 'category' from request query
   try {
-    const tests = await getTestsByCategoryService(category); // Using renamed service
+    const tests = await getTestsByCategoryService(category);
     res.status(200).json(tests);
   } catch (error) {
     res.status(500).json({ error: error.message });

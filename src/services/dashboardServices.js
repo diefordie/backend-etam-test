@@ -109,7 +109,6 @@ export const searchTestsByTitleAndCategoryService = async (title, category) => {
 };
 
 
-// Get tests by category with details (including access count and author)
 export const getTestsByCategoryService = async (category) => {
   const tests = await prisma.test.findMany({
     where: { category },
