@@ -40,12 +40,16 @@ app.use(bodyParser.json());
 // Parsing URL-encoded data
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(express.json());
 app.use(cors({
-    origin: 'http://localhost:3000', // Mengizinkan request dari frontend di port 3000
-    methods: ['GET', 'POST', 'PATCH', 'PUT'],        // Metode HTTP yang diizinkan
-    credentials: true                // Jika ingin mengirimkan cookies atau auth credentials
+    origin: [
+        'http://localhost:3000', 
+        'http://tugas.uniba-bpn.ac.id:3001', 
+        'http://114.7.195.190:3001'
+    ], 
+    methods: ['GET', 'POST', 'PATCH', 'PUT'],
+    credentials: true
 }));
+
 
 // Routes
 // app.use("/api/auth", userRoutes);
