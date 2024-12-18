@@ -4,27 +4,37 @@ class PaymentController {
     processPayment = async (req, res) => {
         try {
             const { testId } = req.body;
-            const token = req.headers.authorization.split(' ')[1]; // Ambil token dari header
-            
+    
+            // Validasi jika `testId` tidak ada
             if (!testId) {
-                return res.status(400).json({ 
-                    error: 'testId is required' 
+                return res.status(400).json({
+                    error: 'testId is required',
                 });
             }
     
+            // Ambil token dari header Authorization
+            const token = req.headers.authorization?.split(' ')[1];
+            if (!token) {
+                return res.status(401).json({
+                    error: 'Authorization token is missing',
+                });
+            }
+    
+            // Panggil service dengan `testId` dan `token`
             const result = await PaymentService.createPaymentToken(testId, token);
-            
+    
             console.log('Payment token created:', {
                 testId,
-                token: result.token
+                token: result.token,
             });
     
+            // Kirimkan token ke frontend
             res.status(200).json({ token: result.token });
         } catch (error) {
-            console.error("Payment process error:", {
+            console.error('Payment process error:', {
                 error: error.message,
                 stack: error.stack,
-                testId: req.body.testId
+                testId: req.body.testId,
             });
             res.status(500).json({ error: error.message });
         }
