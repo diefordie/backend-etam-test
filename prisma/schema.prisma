@@ -98,7 +98,8 @@ model Multiplechoice {
   question         String
   number           Int
   questionPhoto    String?
-  weight           Float
+  isWeighted       Boolean      @default(false)
+  weight           Float?
   discussion       String
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
@@ -145,7 +146,8 @@ model Option {
   optionDescription String
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
-  isCorrect        Boolean
+  points            Int?
+  isCorrect        Boolean?
   multiplechoice    Multiplechoice @relation(fields: [multiplechoiceId], references: [id])
   detail_result     Detail_result[]
 }
