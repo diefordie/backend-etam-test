@@ -138,7 +138,7 @@ export const getTestDetail = async (req, res) => {
 };
 
 
-export { createTest , getTest, testResultController, createTestController,
+export { getTest, testResultController, createTestController,
     publishTestController,
     getAllTests,
     fetchTestsByCategory}; 

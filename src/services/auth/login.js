@@ -15,8 +15,6 @@ const loginUser = async ({ email, password }) => {
             throw new Error('USER_NOT_FOUND');
         }
 
-        // Debugging Password
-        console.log('User Password:', user.password);
         
         // Cek keberadaan pengguna di Firebase Authentication
         let firebaseUser;

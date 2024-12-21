@@ -1,8 +1,13 @@
 import prisma from '../../prisma/prismaClient.js';
 import { hashPassword, validatePassword } from "./auth/utils/hash.js";
 import firebaseAdmin from '../../firebase/firebaseAdmin.js';
+import { bucket } from '../../firebase/firebaseAdmin.js';
+import { ref, deleteObject } from 'firebase/storage';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// Get user by ID
+const STORAGE_URL = process.env.FIREBASE_STORAGE_URL;
+
 export const getUserById = async (userId) => {
   try {
     const user = await prisma.user.findUnique({
@@ -20,7 +25,6 @@ export const getUserById = async (userId) => {
   }
 };
 
-// Memperbarui nama pengguna
 export const updateUserName = async (userId, name) => {
   try {
     const updatedUser = await prisma.user.update({
@@ -33,7 +37,6 @@ export const updateUserName = async (userId, name) => {
   }
 };
 
-// Memperbarui email pengguna
 export const updateUserEmail = async (userId, email) => {
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -53,7 +56,6 @@ export const updateUserEmail = async (userId, email) => {
   }
 };
 
-// Fungsi untuk memperbarui password
 export const updateUserPassword = async (userId, currentPassword, newPassword) => {
   try {
     const user = await prisma.user.findUnique({
@@ -69,7 +71,7 @@ export const updateUserPassword = async (userId, currentPassword, newPassword) =
     console.log("Input currentPassword:", currentPassword);
 
     const isMatch = validatePassword(currentPassword, user.password);
-    console.log("Password Match:", isMatch); // Pastikan hasil validasi benar
+    console.log("Password Match:", isMatch);
 
     if (!isMatch) {
       throw new Error("Current password is incorrect");
@@ -104,7 +106,6 @@ export const updateUserPassword = async (userId, currentPassword, newPassword) =
   }
 };
 
-// Memperbarui foto profil pengguna
 export const updateUserPhoto = async (userId, userPhotoUrl) => {
   try {
     console.log("Updating user photo for userId:", userId, "with URL:", userPhotoUrl);
@@ -120,5 +121,32 @@ export const updateUserPhoto = async (userId, userPhotoUrl) => {
   } catch (error) {
     console.error('Error updating user photo in database:', error.message);
     throw new Error(`Failed to update photo: ${error.message}`);
+  }
+};
+
+export const deletePhotoFromStorageAndPrisma = async (userId) => {
+  try {
+    const user = await getUserById(userId);
+    if (!user || !user.userPhoto) {
+      throw new Error('User or user photo not found');
+    }
+    let filePath = user.userPhoto;
+    if (filePath.includes(STORAGE_URL)) {
+      const urlParts = filePath.split(STORAGE_URL);
+      filePath = urlParts[1] || ''; 
+    }
+
+    if (!filePath) {
+      throw new Error('Invalid file path');
+    }
+
+    const file = bucket.file(filePath);
+    await file.delete();
+    await updateUserPhoto(userId, null);
+
+    return { message: 'Photo deleted successfully from Firebase Storage and Prisma.' };
+  } catch (error) {
+    console.error('Error deleting photo:', error);
+    throw new Error('Failed to delete photo from Firebase Storage and Prisma');
   }
 };

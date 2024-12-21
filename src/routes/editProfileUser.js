@@ -4,7 +4,8 @@ import {
   updateName,
   updateEmail,
   changePassword,
-  uploadPhoto 
+  uploadPhoto,
+  deletePhoto 
 } from '../controllers/editProfileUser.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { 
@@ -18,13 +19,10 @@ import multer from 'multer';
 
 const router = express.Router();
 
-// Konfigurasi `multer` untuk menyimpan file di memori
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Endpoint untuk mendapatkan data profil pengguna
 router.get('/profile', authenticateToken, getUserProfile);
 
-// Endpoint untuk memperbarui nama pengguna
 router.patch(
   '/profile/name', 
   authenticateToken, 
@@ -33,7 +31,6 @@ router.patch(
   updateName
 );
 
-// Endpoint untuk memperbarui email pengguna
 router.patch(
   '/profile/email', 
   authenticateToken, 
@@ -42,7 +39,6 @@ router.patch(
   updateEmail
 );
 
-// Endpoint untuk mengubah kata sandi pengguna
 router.patch(
   '/profile/password', 
   authenticateToken, 
@@ -56,16 +52,20 @@ router.post(
   authenticateToken,
   validateUserPhoto,
   upload.single('profileImage'),
-  uploadPhoto // Controller yang sama dapat menangani unggahan pertama kali
+  uploadPhoto
 );
 
-// Endpoint untuk memperbarui foto profil pengguna
 router.patch(
   '/profile/photo', 
   authenticateToken,
   validateUserPhoto,
   upload.single('profileImage'),
-  uploadPhoto // Controller yang sama dapat menangani pembaruan foto
+  uploadPhoto
 );
+
+router.delete(
+  '/profile/photo', 
+  authenticateToken, 
+  deletePhoto);
 
 export default router;

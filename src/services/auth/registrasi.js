@@ -15,7 +15,7 @@ export const createUser = async ({ name, email, password, role }) => {
     // Validasi apakah email sudah ada di Prisma
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-        throw new Error('EMAIL_ALREADY_REGISTERED');
+        throw new Error('Email ini telah terdaftar, gunakan email lain!');
     }
 
     // Validasi apakah email sudah ada di Firebase Auth

@@ -5,7 +5,8 @@ import {
   updateUserName, 
   updateUserEmail, 
   updateUserPassword, 
-  updateUserPhoto 
+  updateUserPhoto,
+  deletePhotoFromStorageAndPrisma
 } from '../services/editProfileUser.js';
 import { uploadFileToStorage } from '../../firebase/firebaseBucket.js';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
@@ -129,5 +130,19 @@ export const uploadPhoto = async (req, res) => {
   } catch (error) {
     console.error('Error uploading file:', error);
     return res.status(500).json({ error: 'Failed to upload file' });
+  }
+};
+
+export const deletePhoto = async (req, res) => {
+  const userId = req.user.id;  // Ambil userId dari token atau session yang sudah diverifikasi
+
+  try {
+    const result = await deletePhotoFromStorageAndPrisma(userId);  // Panggil service untuk menghapus foto
+    return res.status(200).json(result);  // Kirim respons sukses
+  } catch (error) {
+    
+   
+console.error('Error deleting photo:', error);
+    return res.status(500).json({ message: error.message || 'Failed to delete photo.' });
   }
 };

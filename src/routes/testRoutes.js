@@ -1,5 +1,5 @@
 import express from 'express';
-import { createTest, getTest, testResultController, createTestController, publishTestController, getAllTests, fetchTestsByCategory, getAuthorTests, getTestDetail  } from '../controllers/testControllers.js';
+import { getTest, testResultController, createTestController, publishTestController, getAllTests, fetchTestsByCategory, getAuthorTests, getTestDetail  } from '../controllers/testControllers.js';
 import { authenticateToken } from '../middleware/authMiddleware.js'; 
 
 
@@ -13,7 +13,6 @@ router.get('/author-tests', authenticateToken, getAuthorTests);
 router.get('/test-detail/:testId', getTestDetail);
 
 router.post('/tests', createTestController);
-router.post('/create-test', createTest);
 
 router.put('/tests/:testId/publish', publishTestController);
 
