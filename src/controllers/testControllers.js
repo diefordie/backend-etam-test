@@ -1,20 +1,20 @@
 import { createTestService, getTestService, getTestResult, getAuthorTestsService, getTestDetailById} from '../services/testServices.js'; // Pastikan menggunakan ekstensi .js
 
-const createTest = async (req, res) => {
+const createTestController = async (req, res, next) => {
+    const { authorId, type, category, title, testDescription } = req.body;
+    console.log("Data yang diterima:", req.body);
+
+    if (!authorId || !type || !category || !title || !testDescription) {
+        return res.status(400).json({
+            message: 'Semua field harus diisi.' 
+        });
+    }
+
     try {
-        const newTest = req.body;
-
-        const test = await createTestService(newTest);
-
-        res.status(201).send({
-            data: test,
-            message: 'Create test success',
-        });
+        const newTest = await createTestService({ authorId, type, category, title, testDescription });
+        res.status(201).json(newTest); 
     } catch (error) {
-        res.status(500).send({
-            message: 'Failed to create test',
-            error: error.message,
-        });
+        next(error); 
     }
 };
 
@@ -47,31 +47,6 @@ const testResultController = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
   };
-  
-
-// backend/src/controllers/discussionController.js
-
-
-//import { createTestService, getTestsByCategory, getAllTestsService, publishTestService } from 'backend/src/services/testServices.js';
-
-// Buat tes
-const createTestController = async (req, res, next) => {
-    const { authorId, type, category, title, testDescription } = req.body;
-    console.log("Data yang diterima:", req.body);
-
-    if (!authorId || !type || !category || !title || !testDescription) {
-        return res.status(400).json({
-            message: 'Semua field harus diisi.' 
-        });
-    }
-
-    try {
-        const newTest = await createTestService({ authorId, type, category, title, testDescription });
-        res.status(201).json(newTest); 
-    } catch (error) {
-        next(error); 
-    }
-};
 
 // Publish Tes
 const publishTestController = async (req, res, next) => {

@@ -1,48 +1,94 @@
 import axios from 'axios';
+import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
 
-/**
- * Service to send a payout request to Midtrans
- * @param {Object} payload - Payout data to send
- * @returns {Promise<Object>} - Midtrans API response
- */
-export const sendPayoutToMidtrans = async (payload) => {
+const prisma = new PrismaClient();
+
+const sendPayout = async (bodyData, token) => {
     try {
-      const BASE_URL = 'https://app.sandbox.midtrans.com/iris/api/v1/payouts';
-      const MIDTRANS_SERVER_KEY = 'IRIS-570e43c8-d69f-4e48-9fcb-527c5850b7a2';
-  
-      // Example payload structure
-      const data = {
-        payouts: payload.payouts.map((payout) => ({
-          beneficiary_name: payout.beneficiary_name, 
-          beneficiary_account: payout.beneficiary_account,  
-          beneficiary_bank: payout.beneficiary_bank,  
-          beneficiary_email: payout.beneficiary_email, 
-          amount: payout.amount, 
-          notes: payout.notes,  
-        })),
-      };
-  
-      // Configure the request headers
-      const headers = {
-        'Content-Type': 'application/json', // untuk jenis data yang dikirim
-        'Authorization': `Basic ${Buffer.from(`${MIDTRANS_SERVER_KEY}:`).toString('base64')}`, // untuk otorisasi
-        'Accept': 'application/json' // menambahkan header Accept untuk tipe respons JSON
-      };
-  
-      console.log('Sending request to:', BASE_URL);
-      console.log('Payload:', JSON.stringify(data, null, 2));
-      console.log('Headers:', headers);
-  
-      // Send POST request to Midtrans
-      const response = await axios.post(BASE_URL, data, { headers });
-  
-      console.log('Response from Midtrans:', response.data);
-  
-      return response.data;
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        const usersId = decodedToken.id;
+
+        const author = await prisma.author.findFirst({
+            where: { userId: usersId },
+            include: {
+                user: true,
+            },
+        });
+
+        if (!author || !author.user) {
+            throw new Error('Author atau User tidak ditemukan');
+        }
+
+        const amount = bodyData.amount;
+
+        if (amount < 50000) {
+            throw new Error('Amount harus lebih besar dari 50.000');
+        }
+
+        if (amount > author.profit) {
+            throw new Error(`Saldo Anda tidak cukup. Saldo saat ini: ${author.profit}`);
+        }
+
+        const beneficiaryName = author.name;
+        const beneficiaryEmail = author.user.email;
+        const beneficiaryBank = bodyData.beneficiary_bank;
+        const beneficiaryAccount = bodyData.beneficiary_account;
+        const notes = bodyData.notes;
+
+        const payoutData = {
+            payouts: [
+                {
+                    beneficiary_name: beneficiaryName,
+                    beneficiary_account: beneficiaryAccount,
+                    beneficiary_bank: beneficiaryBank,
+                    beneficiary_email: beneficiaryEmail,
+                    amount: amount,
+                    notes: notes,
+                },
+            ],
+        };
+
+        const response = await axios.post(
+            'https://app.sandbox.midtrans.com/iris/api/v1/payouts',
+            payoutData,
+            {
+                headers: {
+                    'Authorization': `Basic ${Buffer.from(`${process.env.IRIS_API_KEY}:`).toString('base64')}`,
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+            }
+        );
+
+        await prisma.author.update({
+            where: { id: author.id },
+            data: {
+                profit: author.profit - amount,
+            },
+        });
+
+        const referenceNo = response.data.payouts[0].reference_no;
+        const amounts = parseInt(amount, 10)
+
+        await prisma.withdrawal.create({
+            data: {
+                authorId: author.id,
+                amount: amounts,
+                bankCode: beneficiaryBank,
+                accountNumber: beneficiaryAccount,
+                accountName: beneficiaryName,
+                reference: referenceNo,
+                notes: notes,
+            },
+        });
+
+        return response.data;
     } catch (error) {
-      // Handle errors from the Midtrans API
-      console.error('Error sending payout to Midtrans:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to send payout to Midtrans');
+        throw new Error(
+            `Midtrans Payout Error: ${error.response?.data?.message || error.message}`
+        );
     }
-  };
-  
+};
+
+export default sendPayout;

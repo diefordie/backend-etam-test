@@ -3,18 +3,40 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const createTestService = async (newTest) => {
-    return await prisma.test.create({
-        data: {
-            authorId: newTest.authorId, 
-            category: newTest.category,
-            title: newTest.title,
-            testDescription: newTest.testDescription,
-            price: newTest.price,
-            similarity: newTest.similarity,
-            worktime: newTest.worktime,
-            review: newTest.review,
-        },
-    });
+  try {
+      return await prisma.test.create({
+          data: {
+              authorId: newTest.authorId,
+              type: newTest.type,
+              category: newTest.category,
+              title: newTest.title,
+              testDescription: newTest.testDescription,
+          },
+      });
+  } catch (error) {
+      console.error("Error saat membuat tes:", error);
+      throw new Error('Gagal membuat tes');
+  }
+};
+
+const publishTestService = async (testId, updateData) => {
+  try {
+      const updatedTest = await prisma.test.update({
+          where: { id: testId },
+          data: {
+              ...updateData,
+              isPublished: true, 
+          },
+      });
+      return updatedTest;
+  } catch (error) {
+      if (error.code === 'P2025') {
+          console.error('Gagal mempublish tes: Rekaman tidak ditemukan dengan ID', testId);
+      } else {
+          console.error('Kesalahan tidak terduga:', error);
+      }
+      throw error; 
+  }
 };
 
 const getTestService = async (testId) => {     
@@ -160,4 +182,4 @@ export const getTestDetailById = async (testId) => {
 };
 
 
-export { createTestService, getTestService, getTestResult }; // Menggunakan named export
+export { createTestService, publishTestService, getTestService, getTestResult }; // Menggunakan named export

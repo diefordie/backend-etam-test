@@ -70,8 +70,7 @@ app.use("/user", editProfile);
 app.use('/api', riwayattransaksiRoutes);
 app.use('/api', testimoni);
 app.use('/api/payment', paymentRoutes);
-app.use('/api', payoutRoutes);
-
+app.use('/api/withdrawals', payoutRoutes);
 
 app.use('/api', checkStatusTransactionRoutes);
 

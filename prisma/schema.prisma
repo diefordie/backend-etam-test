@@ -162,6 +162,7 @@ model Transaction {
   total          Int?
   paymentId      String?
   paymentStatus  PaymentStatus
+  vaNumber       String?
   test           Test              @relation(fields: [testId], references: [id])
   user           User              @relation(fields: [userId], references: [id])
 }
@@ -203,13 +204,6 @@ enum PaymentStatus {
   EXPIRED
 }
 
-enum WithdrawalStatus {
-  PENDING
-  PROCESSING
-  SUCCESS
-  FAILED
-}
-
 model Withdrawal {
   id            String           @id @default(cuid())
   authorId      String
@@ -217,7 +211,6 @@ model Withdrawal {
   bankCode      String      
   accountNumber String     
   accountName   String         
-  status        WithdrawalStatus @default(PENDING)
   reference     String?         
   notes         String?        
   createdAt     DateTime        @default(now())
