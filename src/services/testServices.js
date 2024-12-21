@@ -53,7 +53,7 @@ const getTestService = async (testId) => {
         });
 }
 
-export const getTestResult = async (resultId) => {
+const getTestResult = async (resultId) => {
   try {
     // Dapatkan hasil tes berdasarkan resultId
     const latestTestResult = await prisma.result.findUnique({
