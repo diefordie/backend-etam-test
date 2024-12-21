@@ -69,55 +69,97 @@ class PaymentService {
                 });
     
                 const snapResponse = await this.snap.createTransaction(parameter);
+                console.log('Snap response:', snapResponse);
                 return snapResponse;
             } catch (error) {
                 throw new Error(`Failed to create payment token: ${error.message}`);
             }
         }
 
-    async processNotification(notification) {
-        try {
-            if (!notification || typeof notification !== 'object') {
-                throw new Error(`Invalid notification payload: ${JSON.stringify(notification)}`);
+        async processNotification(notification) {
+            try {
+                if (!notification || typeof notification !== 'object') {
+                    throw new Error(`Invalid notification payload: ${JSON.stringify(notification)}`);
+                }
+        
+                const statusResponse = await this.core.transaction.notification(notification);
+        
+                const {
+                    transaction_status: transactionStatus,
+                    fraud_status: fraudStatus,
+                    order_id: orderId,
+                    transaction_id: transactionId,
+                    payment_type: paymentType,
+                    status_message: statusMessage,
+                    gross_amount: grossAmount,
+                    va_numbers: vaNumbers
+                } = statusResponse;
+
+                console.log('Transaction status:', transactionStatus);
+                console.log('VA Numbers:', vaNumbers);
+        
+                if (!orderId) {
+                    throw new Error('Missing order_id in notification');
+                }
+        
+                const transaction = await prisma.transaction.findFirst({
+                    where: { paymentId: orderId },
+                    include: {
+                        test: {
+                            include: {
+                                author: true // Sertakan informasi author
+                            }
+                        }
+                    }
+                });
+        
+                if (!transaction) {
+                    throw new Error(`Transaction not found for order ID: ${orderId}`);
+                }
+        
+                let paymentStatus = this.determinePaymentStatus(transactionStatus, fraudStatus);
+                paymentStatus = paymentStatus.toUpperCase();
+
+                const vaNumber = vaNumbers && vaNumbers[0]?.va_number;
+        
+                // Update transaksi
+                const updatedTransaction = await prisma.transaction.update({
+                    where: { id: transaction.id },
+                    data: { paymentStatus, vaNumber}
+                });
+        
+                // Tambahkan logika pembagian keuntungan HANYA jika pembayaran berhasil
+                if (paymentStatus === 'PAID') {
+                    // Hitung pembagian keuntungan
+                    const totalPrice = transaction.total;
+                    const authorProfit = Math.floor(totalPrice * 0.7); // 70% untuk author
+                    const platformProfit = totalPrice - authorProfit; // 30% untuk platform
+        
+                    // Update profit author
+                    await prisma.author.update({
+                        where: { id: transaction.test.authorId },
+                        data: { 
+                            profit: { increment: authorProfit }
+                        }
+                    });
+        
+                    // Opsional: Catat detail pembagian keuntungan
+                    await prisma.profitDistribution.create({
+                        data: {
+                            transactionId: transaction.id,
+                            authorId: transaction.test.authorId,
+                            totalAmount: totalPrice,
+                            authorProfit: authorProfit,
+                            platformProfit: platformProfit
+                        }
+                    });
+                }
+        
+                return paymentStatus;
+            } catch (error) {
+                throw error;
             }
-
-            const statusResponse = await this.core.transaction.notification(notification);
-
-            const {
-                transaction_status: transactionStatus,
-                fraud_status: fraudStatus,
-                order_id: orderId,
-                transaction_id: transactionId,
-                payment_type: paymentType,
-                status_message: statusMessage,
-                gross_amount: grossAmount
-            } = statusResponse;
-
-            if (!orderId) {
-                throw new Error('Missing order_id in notification');
-            }
-
-            const transaction = await prisma.transaction.findFirst({
-                where: { paymentId: orderId }
-            });
-
-            if (!transaction) {
-                throw new Error(`Transaction not found for order ID: ${orderId}`);
-            }
-
-            let paymentStatus = this.determinePaymentStatus(transactionStatus, fraudStatus);
-            paymentStatus = paymentStatus.toUpperCase();
-
-            const updatedTransaction = await prisma.transaction.update({
-                where: { id: transaction.id },
-                data: { paymentStatus }
-            });
-
-            return paymentStatus;
-        } catch (error) {
-            throw error;
         }
-    }
 
     determinePaymentStatus(transactionStatus, fraudStatus) {
         const statusMap = {
