@@ -290,3 +290,26 @@ export const getAuthorDataService = async (token) => {
     throw new Error("Failed to retrieve author data: " + error.message);
   }
 };
+
+export const getAuthorById = async (userId) => {
+  try {
+    const author = await prisma.author.findFirst({
+      where: { 
+        userId: userId 
+      },
+      select: { 
+        name: true,
+        profit: true,
+      },
+    });
+
+    if (!author) {
+      throw new Error('Author not found');
+    }
+
+    return author;
+  } catch (error) {
+    console.error('Error fetching author by user ID:', error);
+    throw error;
+  }
+};

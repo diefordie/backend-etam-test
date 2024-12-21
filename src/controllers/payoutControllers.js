@@ -1,27 +1,28 @@
-import { sendPayoutToMidtrans } from '../services/payoutServices.js';
+import sendPayout from '../services/payoutServices.js';
 
-/**
- * Controller to handle payout creation
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- */
-export const createPayout = async (req, res) => {
-  try {
-    const payload = req.body;
+const createPayout = async (req, res) => {
+    try {
+        const {...bodyData } = req.body; // Ambil authorId dan data lainnya dari body
 
-    // Validate input data (you can extend this as needed)
-    if (!payload.payouts || !Array.isArray(payload.payouts)) {
-      return res.status(400).json({ message: 'Invalid payout data' });
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({
+                error: 'Authorization token is missing',
+            });
+        }
+
+        // Panggil service untuk mengirim payout
+        const result = await sendPayout(bodyData, token);
+
+        return res.status(200).json({
+            message: 'Payout berhasil dikirim',
+            data: result,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message,
+        });
     }
-
-    // Call the service to send the payout request to Midtrans
-    const midtransResponse = await sendPayoutToMidtrans(payload);
-
-    res.status(200).json({
-      message: 'Payout sent successfully',
-      data: midtransResponse,
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to process payout', error: error.message });
-  }
 };
+
+export default createPayout;
