@@ -53,19 +53,20 @@ const getTestService = async (testId) => {
         });
 }
 
-const getTestResult = async (resultId) => {
+export const getTestResult = async (resultId) => {
   try {
     // Dapatkan hasil tes berdasarkan resultId
     const latestTestResult = await prisma.result.findUnique({
       where: { id: resultId },
       select: {
         score: true,
+        createdAt: true, // Tambahkan ini untuk mengambil createdAt
         user: {
           select: { name: true },
         },
         test: {
           select: {
-            id: true, // id test
+            id: true,
             title: true,
             multiplechoice: {
               select: {
@@ -78,10 +79,10 @@ const getTestResult = async (resultId) => {
           select: {
             option: {
               select: {
-                isCorrect: true, // untuk mengecek apakah jawaban benar
+                isCorrect: true,
               },
             },
-            status: true, // untuk mengecek apakah statusnya final
+            status: true,
           },
         },
       },
@@ -103,10 +104,11 @@ const getTestResult = async (resultId) => {
     return {
       score: latestTestResult.score,
       userName: latestTestResult.user.name,
-      testId: latestTestResult.test.id, // id test
+      testId: latestTestResult.test.id,
       testTitle: latestTestResult.test.title,
-      correctAnswers, // jumlah jawaban benar
-      wrongAnswers,   // jumlah jawaban salah
+      correctAnswers,
+      wrongAnswers,
+      createdAt: latestTestResult.createdAt, // Tambahkan ini ke output
     };
   } catch (error) {
     console.error('Error fetching test result:', error);
