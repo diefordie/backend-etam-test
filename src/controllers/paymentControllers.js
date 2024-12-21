@@ -42,8 +42,6 @@ class PaymentController {
 
     handleWebhook = async (req, res) => {
         try {
-            console.log('Received webhook payload:', req.body);
-
             const notificationData = req.body;
 
             if (!notificationData || !notificationData.transaction_status) {

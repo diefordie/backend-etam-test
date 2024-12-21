@@ -1,20 +1,18 @@
 import prisma from '../../prisma/prismaClient.js';
 
-
 export const getTransactionByUserId = async (userId) => {
     try {
-        // Fetch transactions for the user
         const transactions = await prisma.transaction.findMany({
-            where: { userId },  // Cari transaksi berdasarkan userId
+            where: { userId }, 
             include: {
-                test: { // Mengambil informasi terkait test
+                test: {
                     include: {
-                        author: { // Mengambil informasi penulis dari test
+                        author: {
                             include: {
-                                user: { // Mengambil data user yang terkait dengan author
+                                user: { 
                                     select: {
                                         name: true,
-                                        userPhoto: true, // Mengambil userPhoto dari model User
+                                        userPhoto: true, 
                                     },
                                 },
                             },
@@ -23,7 +21,7 @@ export const getTransactionByUserId = async (userId) => {
                 },
             },
             orderBy: {
-                paymentTime: 'desc', // Mengurutkan transaksi berdasarkan waktu pembayaran
+                paymentTime: 'desc', 
             },
         });
 
@@ -31,14 +29,12 @@ export const getTransactionByUserId = async (userId) => {
             where: { id: userId },
             select: {
                 name: true,
-                userPhoto: true, // Foto dari user yang login
+                userPhoto: true, 
             }
         });
         
+        console.log('Fetched Transactions:', transactions); 
 
-        console.log('Fetched Transactions:', transactions); // Check fetched data
-
-        // Transform transactions with detailed status handling
         const transformedTransactions = await Promise.all(
             transactions.map(async (transaction) => {
                 console.log('Transaction PaymentStatus:', transaction.paymentStatus, typeof transaction.paymentStatus);
@@ -59,8 +55,9 @@ export const getTransactionByUserId = async (userId) => {
 
                 console.log('History Count:', historyCount);
                 console.log('History:', history);
+                console.log('Transaction VA Numbers:', transaction.vaNumbers);
 
-                // Helper to define custom status for frontend display
+
                 const getCustomStatus = (status, hasHistory) => {
                     switch (status) {
                         case 'PENDING':
@@ -75,15 +72,14 @@ export const getTransactionByUserId = async (userId) => {
                     }
                 };
 
-                // Set custom status based on payment status and history
                 const customStatus = getCustomStatus(transaction.paymentStatus, history);
 
-                // Return transformed transaction with additional info
                 return {
                     ...transaction,
                     customStatus,
                     historyCount,
                     userData,
+                    vaNumber: transaction.paymentStatus === 'PENDING' ? transaction.vaNumber: null,
                 };
             })
         );

@@ -26,22 +26,24 @@ export const hashPassword = (password) => {
 
 export const validatePassword = (password, storedHash) => {
   try {
-    const [, params, salt, hash] = storedHash.split("$");
+    const [, params, salt, hash] = storedHash.split("$").slice(1); // Slice untuk mengabaikan '$scrypt'
+    console.log("Extracted Params:", { params, salt, hash });
 
-    if (params && params.startsWith("n=") && salt && hash) {
+    // Pastikan format yang benar
+    if (params && salt && hash) {
       const config = Object.fromEntries(
         params.split(",").map((param) => param.split("="))
       );
+      console.log("Parsed Config:", config);
 
-      console.log("Validation Config:", { n: config.n, r: config.r, p: config.p, salt });
-
+      // Hash ulang password dengan salt yang sama
       const derivedKey = scryptSync(password, salt, 64, {
-        n: parseInt(config.n),
-        r: parseInt(config.r),
-        p: parseInt(config.p),
+        n: parseInt(config.n, 10),
+        r: parseInt(config.r, 10),
+        p: parseInt(config.p, 10),
       });
 
-      const derivedHash = derivedKey.toString("base64").replace(/=+$/, "");
+      const derivedHash = Buffer.from(derivedKey).toString("base64").replace(/=+$/, "");
       console.log("Derived Hash:", derivedHash);
       console.log("Stored Hash:", hash);
 
