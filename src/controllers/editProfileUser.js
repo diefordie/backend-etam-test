@@ -6,7 +6,11 @@ import {
   updateUserEmail, 
   updateUserPassword, 
   updateUserPhoto,
-  deletePhotoFromStorageAndPrisma
+  deletePhotoFromStorageAndPrisma,
+  updateAuthorName,
+  updateAuthorHandphone,
+  updateAuthorPhoto,
+  getHandphoneNum
 } from '../services/editProfileUser.js';
 import { uploadFileToStorage } from '../../firebase/firebaseBucket.js';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
@@ -92,7 +96,6 @@ export const changePassword = async (req, res) => {
     // Mengirimkan response error yang lebih jelas
     return res.status(400).json({
       message: error.message || 'Failed to update password.',
-      // Anda bisa menambahkan status atau kode kesalahan lain jika diperlukan
       error: error.stack || 'No stack trace available.',
     });
   }
@@ -104,25 +107,19 @@ export const uploadPhoto = async (req, res) => {
     const userId = req.user.id;
     const file = req.file;
 
-    console.log("User ID:", userId); // Log untuk memeriksa userId
-    console.log("File received:", file); // Log untuk memastikan file diterima
+    console.log("User ID:", userId); 
+    console.log("File received:", file); 
 
     if (!file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Tentukan path file di Firebase Storage
     const destination = `profiles/${Date.now()}_${file.originalname}`;
     
-    // Upload file ke Firebase Storage
     const url = await uploadFileToStorage(file.buffer, destination);
-    console.log("URL generated from Firebase:", url); // Log untuk melihat URL dari Firebase
-
-    // Simpan URL ke database
+    console.log("URL generated from Firebase:", url);
     const updatedUser = await updateUserPhoto(userId, url);
-    console.log("Updated user data:", updatedUser); // Log hasil dari Prisma untuk memastikan update berhasil
-
-    // Kembalikan respons ke client
+    console.log("Updated user data:", updatedUser); 
     return res.status(200).json({
       message: 'File uploaded successfully',
       url: updatedUser.userPhoto,
@@ -144,5 +141,102 @@ export const deletePhoto = async (req, res) => {
    
 console.error('Error deleting photo:', error);
     return res.status(500).json({ message: error.message || 'Failed to delete photo.' });
+  }
+};
+
+//Authorname
+export const updateAuthorNameController = async (req, res) => {
+  const userId = req.user.id;  // Ensure userId is available from req.user (authenticated user)
+  const { name } = req.body;    // Get the name from the request body
+
+  try {
+    // Call the service to update both User and Author names
+    const { updatedUser, updatedAuthor } = await updateAuthorName(userId, name);
+
+    // Return success response with updated user and author
+    return res.status(200).json({
+      message: 'Name updated successfully',
+      user: updatedUser,
+      author: updatedAuthor,
+    });
+  } catch (error) {
+    console.error('Error updating user name:', error);
+    return res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateAuthorHandphoneController = async (req, res) => {
+  const userId = req.user.id; 
+  const { handphoneNum } = req.body; 
+
+  try {
+    const updatedAuthor = await updateAuthorHandphone(userId, handphoneNum);
+
+    return res.status(200).json({
+      message: 'Handphone number updated successfully',
+      author: updatedAuthor,
+    });
+  } catch (error) {
+    console.error('Error updating handphone number:', error);
+    return res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateAuthorPhotoController = async (req, res) => {
+  const userId = req.user.id;
+  const file = req.file;  // Ambil file dari request
+
+  if (!file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+
+  try {
+    // Mengunggah file ke storage (misalnya Firebase)
+    const destination = `profiles/${Date.now()}_${file.originalname}`;
+    const userPhotoUrl = await uploadFileToStorage(file.buffer, destination); // Fungsi upload ke storage
+
+    // Validasi URL yang dihasilkan
+    if (!userPhotoUrl || typeof userPhotoUrl !== 'string' || userPhotoUrl.trim() === '') {
+      return res.status(400).json({ message: 'Invalid photo URL provided' });
+    }
+
+    // Perbarui foto di tabel User dan Author berdasarkan userId
+    const { updatedUser, updatedAuthor } = await updateAuthorPhoto(userId, userPhotoUrl);
+
+    return res.status(200).json({
+      message: 'Photo updated successfully',
+      user: updatedUser,
+      author: updatedAuthor,
+    });
+  } catch (error) {
+    console.error('Error updating photo:', error);
+    return res.status(400).json({ message: error.message });
+  }
+};
+
+export const getHandphoneController = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
+    }
+
+    const { handphoneNum } = await getHandphoneNum(userId);
+
+    return res.status(200).json({
+      success: true,
+      handphoneNum,
+    });
+  } catch (error) {
+    console.error("Error in fetchHandphoneNum:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

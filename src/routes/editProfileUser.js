@@ -5,7 +5,11 @@ import {
   updateEmail,
   changePassword,
   uploadPhoto,
-  deletePhoto 
+  deletePhoto,
+  updateAuthorNameController,
+  updateAuthorHandphoneController,
+  updateAuthorPhotoController,
+  getHandphoneController
 } from '../controllers/editProfileUser.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { 
@@ -67,5 +71,31 @@ router.delete(
   '/profile/photo', 
   authenticateToken, 
   deletePhoto);
+
+
+//author Edit Profile
+
+router.patch('/profile/author/name', authenticateToken, validateUserName, checkValidationResult, updateAuthorNameController);
+
+router.patch('/profile/author/handphone', authenticateToken, updateAuthorHandphoneController);
+
+router.post(
+  '/profile/author/photo', 
+  authenticateToken,
+  validateUserPhoto,
+  upload.single('profileImage'),
+  updateAuthorPhotoController
+);
+
+router.patch(
+  '/profile/author/photo', 
+  authenticateToken,
+  validateUserPhoto,
+  upload.single('profileImage'),
+  updateAuthorPhotoController
+);
+
+// Route untuk mendapatkan data user dan author berdasarkan userId
+router.get("/profile/handphoneNum/:userId", authenticateToken, getHandphoneController);
 
 export default router;

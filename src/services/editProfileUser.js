@@ -70,15 +70,14 @@ export const updateUserPassword = async (userId, currentPassword, newPassword) =
     console.log("Stored Hash from DB:", user.password);
     console.log("Input currentPassword:", currentPassword);
 
-    const isMatch = validatePassword(currentPassword, user.password);
+    const isMatch = await validatePassword(currentPassword, user.password);
     console.log("Password Match:", isMatch);
 
     if (!isMatch) {
       throw new Error("Current password is incorrect");
     }
-
-    const hashedPassword = hashPassword(newPassword);
-    const updateResults = await Promise.allSettlecd([
+    const hashedPassword = await hashPassword(newPassword); 
+    const updateResults = await Promise.allSettled([
       prisma.user.update({
         where: { id: userId },
         data: { password: hashedPassword },
@@ -94,11 +93,9 @@ export const updateUserPassword = async (userId, currentPassword, newPassword) =
         console.log(`Update operation ${index + 1} succeeded.`);
       }
     });
-
     if (updateResults.every((result) => result.status === "fulfilled")) {
-      return { message: "Password updated successfully" };A
+      return { message: "Password updated successfully" };
     }
-
     throw new Error("Some update operations failed. Check logs for details.");
   } catch (error) {
     console.error("Error updating password:", error);
@@ -114,9 +111,7 @@ export const updateUserPhoto = async (userId, userPhotoUrl) => {
       where: { id: userId },
       data: { userPhoto: userPhotoUrl },
     });
-
     console.log("Database update successful. Updated user:", updatedUser);
-
     return updatedUser;
   } catch (error) {
     console.error('Error updating user photo in database:', error.message);
@@ -135,18 +130,113 @@ export const deletePhotoFromStorageAndPrisma = async (userId) => {
       const urlParts = filePath.split(STORAGE_URL);
       filePath = urlParts[1] || ''; 
     }
-
     if (!filePath) {
       throw new Error('Invalid file path');
     }
-
     const file = bucket.file(filePath);
     await file.delete();
     await updateUserPhoto(userId, null);
-
     return { message: 'Photo deleted successfully from Firebase Storage and Prisma.' };
   } catch (error) {
     console.error('Error deleting photo:', error);
     throw new Error('Failed to delete photo from Firebase Storage and Prisma');
+  }
+};
+
+export const updateAuthorName = async (userId, name) => {
+  try {
+    // Find the first author matching the userId
+    const author = await prisma.author.findFirst({
+      where: { userId: userId },
+    });
+    if (!author) {
+      throw new Error('Author not found for the given userId');
+    }
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { name },
+    });
+    const updatedAuthor = await prisma.author.update({
+      where: { id: author.id },
+      data: { name },
+    });
+    return { updatedUser, updatedAuthor };
+  } catch (error) {
+    throw new Error(`Failed to update name: ${error.message}`);
+  }
+};
+
+export const updateAuthorHandphone = async (userId, handphoneNum) => {
+  try {
+    const author = await prisma.author.findFirst({
+      where: { userId: userId },
+    });
+
+    if (!author) {
+      throw new Error('Author not found for the given userId');
+    }
+    const updatedAuthor = await prisma.author.update({
+      where: { id: author.id },
+      data: { handphoneNum: handphoneNum },
+    });
+    return updatedAuthor;
+  } catch (error) {
+    throw new Error(`Failed to update handphone number: ${error.message}`);
+  }
+};
+
+export const updateAuthorPhoto = async (userId, authorPhoto) => {
+  try {
+    const author = await prisma.author.findFirst({
+      where: { userId },
+    });
+    if (!author) {
+      throw new Error("Author not found for the given userId");
+    }
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { userPhoto: authorPhoto },
+    });
+    const updatedAuthor = await prisma.author.update({
+      where: { id: author.id },
+      data: { authorPhoto },
+    });
+    return { updatedUser, updatedAuthor };
+  } catch (error) {
+    throw new Error(`Failed to update photo: ${error.message}`);
+  }
+}
+
+export const getHandphoneNum = async (userId) => {
+  try {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        author: {
+          select: {
+            handphoneNum: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (!user.author || user.author.length === 0) {
+      throw new Error("Author not found for this user");
+    }
+
+    const handphoneNum = user.author[0].handphoneNum;
+
+    return { handphoneNum };
+  } catch (error) {
+    console.error(`Error fetching handphone number: ${error.message}`);
+    throw new Error(`Failed to get handphone number: ${error.message}`);
   }
 };
