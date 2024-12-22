@@ -1,156 +1,234 @@
-// backend/src/services/discussionService.js
 import { PrismaClient } from '@prisma/client';
-import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url'; 
+import pdfMake from 'pdfmake/build/pdfmake.js';
+import pdfFonts from 'pdfmake/build/vfs_fonts.js';
+
+pdfMake.vfs = pdfFonts.pdfMake.vfs; 
 
 const prisma = new PrismaClient();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export const getDiscussionsByResultId = async (resultId) => {
     try {
-      const discussions = await prisma.result.findUnique({
-        where: { id: resultId },
-        include: {
-          detail_result: {
+        const discussions = await prisma.result.findUnique({
+            where: { id: resultId },
             include: {
-              option: {
-                include: {
-                  multiplechoice: {
-                    select: {
-                      discussion: true,
-                      question: true,
-                      option: {
-                        select: {
-                          isCorrect: true,
-                          optionDescription: true
+                test: true,
+                detail_result: {
+                    include: {
+                        option: {
+                            include: {
+                                multiplechoice: {
+                                    select: {
+                                        discussion: true,
+                                        question: true,
+                                        pageName: true, 
+                                        option: {
+                                            select: {
+                                                isCorrect: true,
+                                                optionDescription: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                      }
                     }
-                  }
                 }
-              }
             }
-          }
+        });
+
+        if (!discussions) {
+            throw new Error('Result not found');
         }
-      });
-  
-      if (!discussions) {
-        throw new Error('Result not found');
-      }
-  
-      // Map the data to return necessary information
-      const formattedDiscussions = discussions.detail_result.map(detail => ({
-        question: detail.option.multiplechoice.question,
-        discussion: detail.option.multiplechoice.discussion,
-        userAnswer: detail.userAnswer,
-        correctOption: detail.option.multiplechoice.option
-          .filter(opt => opt.isCorrect)
-          .map(opt => opt.optionDescription)
-      }));
-  
-      return formattedDiscussions;
+
+        const formattedDiscussions = discussions.detail_result.map(detail => ({
+            pageName: detail.option.multiplechoice.pageName,
+            question: detail.option.multiplechoice.question,
+            discussion: detail.option.multiplechoice.discussion,
+            userAnswer: detail.userAnswer,
+            correctOption: detail.option.multiplechoice.option
+                .filter(opt => opt.isCorrect)
+                .map(opt => opt.optionDescription),
+            allOptions: detail.option.multiplechoice.option.map(opt => opt.optionDescription)
+        }));
+
+        return {
+            test: discussions.test,
+            discussions: formattedDiscussions
+        };
     } catch (error) {
-      console.error('Error fetching discussions:', error);
-      throw error;
+        console.error('Error fetching discussions:', error);
+        throw error;
     }
-  };
+};
 
-  export const generateDiscussionPDF = async (resultId) => {
+export const generateDiscussionPDF = async (resultId) => {
     try {
-      const discussions = await getDiscussionsByResultId(resultId);
-      const doc = new PDFDocument({
-        size: 'A4',
-        margins: { top: 50, left: 50, right: 50, bottom: 50 }
-      });
-  
-      // Hapus kode yang berkaitan dengan font Poppins
-      // const fontPath = path.resolve('/usr/src/app/src/public/Poppins-Regular.ttf');
-      // doc.registerFont('Poppins', fontPath);
-  
-      // Gunakan font default (Helvetica)
-      doc.font('Helvetica');
-  
-      // Tambahkan header
-      doc.fontSize(24).fillColor('#0B61AA').text('Pembahasan Soal', { align: 'center' });
-      doc.moveDown();
-  
-      // Tambahkan logo (jika ada)
-      // Pastikan path logo benar dan file ada
-      try {
-        const logoPath = path.resolve(__dirname, '../../public/image/logofix.png');
-        if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, 50, 45, { width: 50 });
-        } else {
-          console.log('Logo file not found:', logoPath);
-        }
-      } catch (error) {
-        console.error('Error adding logo:', error);
-      }
-  
-      doc.moveDown();
-  
-    discussions.forEach((item, index) => {
-      // Nomor soal dengan latar belakang
-      doc.fillColor('#FFFFFF')
-         .rect(50, doc.y, 30, 30)
-         .fill('#0B61AA')
-         .fillColor('#FFFFFF')
-         .fontSize(16)
-         .text(`${index + 1}`, 50, doc.y - 25, { width: 30, align: 'center' });
+        const { test, discussions } = await getDiscussionsByResultId(resultId);
 
-      // Pertanyaan
-      doc.moveDown(0.5)
-         .fontSize(14)
-         .fillColor('#000000')
-         .text(`Soal: ${item.question}`, { width: 500 });
+        const content = [];
 
-      // Jawaban pengguna
-      doc.moveDown(0.5)
-         .fontSize(12)
-         .fillColor('#4A4A4A')
-         .text(`Jawaban Anda: ${item.userAnswer}`, { width: 500 });
+        const logoPath = path.join(__dirname, '../../../frontend/public/images/logofix.png');
+        const logoBase64 = fs.readFileSync(logoPath).toString('base64');
+        const logoImage = `data:image/png;base64,${logoBase64}`;
 
-      // Pembahasan
-      doc.moveDown(0.5)
-         .fontSize(12)
-         .fillColor('#0B61AA')
-         .text('Pembahasan:', { continued: true })
-         .fillColor('#000000')
-         .text(` ${item.discussion}`, { width: 500 });
+        content.push({
+            columns: [
+                {
+                    image: logoImage,
+                    width: 120,
+                    margin: [0, 0, 0, 0]
+                },
+                {
+                    text: [
+                        { text: `Latihan Tes ${test.category}\n`, style: 'headerCategory' },
+                        { text: `${test.title}`, style: 'headerTitle' }
+                    ],
+                    alignment: 'left',
+                    margin: [5, 0, 0, 0]
+                }
+            ],
+            margin: [0, 0, 0, 5],
+            columnGap: 5,
+        });
 
-      // Garis pemisah antar soal
-      if (index < discussions.length - 1) {
-        doc.moveDown()
-           .strokeColor('#CCCCCC')
-           .lineWidth(1)
-           .moveTo(50, doc.y)
-           .lineTo(550, doc.y)
-           .stroke();
-      }
+        const downloadDate = new Date().toLocaleString();
+        content.push({
+            text: `Diunduh pada: ${downloadDate}`,
+            style: 'subheader',
+            alignment: 'right',
+            margin: [0, 0, 0, 5],
+        });
 
-      doc.moveDown();
-    });
+        const groupedDiscussions = discussions.reduce((acc, curr) => {
+            if (!acc[curr.pageName]) acc[curr.pageName] = [];
+            acc[curr.pageName].push(curr);
+            return acc;
+        }, {});
 
-    // Tambahkan nomor halaman
-    const range = doc.bufferedPageRange();
-    for (let i = range.start; i < range.start + range.count; i++) {
-      doc.switchToPage(i);
-      doc.fillColor('#000000')
-         .fontSize(10)
-         .text(
-           `Halaman ${i + 1} dari ${range.count}`,
-           50,
-           doc.page.height - 50,
-           { align: 'center', width: doc.page.width - 100 }
-         );
+        Object.keys(groupedDiscussions).forEach(pageName => {
+            content.push({
+                text: `${pageName}`,
+                style: 'sectionHeader'
+            });
+
+            const tableData = groupedDiscussions[pageName].map((item, index) => {
+                // Menambahkan abjad atau angka sebagai pengganti bullet
+                const optionsList = item.allOptions.map((opt, idx) => {
+                    return `${String.fromCharCode(65 + idx)}. ${opt}`; // Menggunakan abjad: A, B, C, ...
+                }).join('\n');
+
+                return [
+                    { text: `${index + 1}`, alignment: 'center', margin: [5, 5] },
+                    {
+                        text: [
+                            { text: `${item.question}\n`, style: 'question' },
+                            {
+                                // Menampilkan opsi dengan abjad atau angka
+                                text: optionsList,
+                                style: 'optionList',
+                                margin: [10, 0]  // Mengatur margin untuk tampilan rapi
+                            }
+                        ],
+                        alignment: 'left',
+                        margin: [5, 5]
+                    },
+                    {
+                        text: `Jawaban Anda: ${item.userAnswer}\n\nPembahasan:\n${item.discussion}`,
+                        alignment: 'left',
+                        margin: [5, 5],
+                        fontSize: 12, // Pembahasan dengan ukuran lebih besar
+                    }
+                ];
+            });
+
+            content.push({
+                style: 'table',
+                table: {
+                    headerRows: 1,
+                    widths: ['10%', '50%', '40%'],
+                    body: [
+                        [
+                            { text: 'No', style: 'tableHeader' },
+                            { text: 'Soal dan Opsi', style: 'tableHeader' },
+                            { text: 'Jawaban dan Pembahasan', style: 'tableHeader' }
+                        ],
+                        ...tableData
+                    ]
+                },
+                layout: {
+                    fillColor: (rowIndex) => rowIndex % 2 === 0 ? '#F3F3F3' : null
+                }
+            });
+        });
+
+        const docDefinition = {
+            content,
+            styles: {
+                headerCategory: {
+                    fontSize: 18,
+                    bold: true
+                },
+                headerTitle: {
+                    fontSize: 22,
+                    bold: true
+                },
+                subheader: {
+                    fontSize: 10,
+                    italics: true
+                },
+                sectionHeader: {
+                    fontSize: 14,
+                    bold: true,
+                    margin: [0, 20, 0, 10]
+                },
+                table: {
+                    margin: [0, 5, 0, 15]
+                },
+                tableHeader: {
+                    bold: true,
+                    fontSize: 13,
+                    color: 'white',
+                    fillColor: '#06549D',
+                    alignment: 'center'
+                },
+                question: {
+                    fontSize: 12,
+                    bold: true
+                },
+                optionList: {
+                    fontSize: 12,
+                    margin: [10, 0]  // Menyesuaikan margin untuk opsi
+                }
+            },
+            footer: (currentPage, pageCount) => {
+                return {
+                    columns: [
+                        { text: 'Etam Test - Informatika ITK\'22', alignment: 'left', fontSize: 8 },
+                        { text: `Page ${currentPage} of ${pageCount}`, alignment: 'right', fontSize: 8 }
+                    ],
+                    margin: [10, 0]
+                };
+            },
+            defaultStyle: {
+                font: 'Roboto'
+            }
+        };
+
+        const pdfDoc = pdfMake.createPdf(docDefinition);
+
+        pdfDoc.getBuffer((buffer) => {
+            fs.writeFileSync(path.join(__dirname, 'discussion.pdf'), buffer);
+        });
+
+        return pdfDoc;
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        throw error;
     }
-
-    // Finalisasi dokumen PDF
-    doc.end();
-
-    return doc;
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    throw error;
-  }
 };

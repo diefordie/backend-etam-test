@@ -10,7 +10,7 @@ datasource db {
 }
 
 model Test {
-  id                String        @id @default(cuid())
+  id               String        @id @default(cuid())
   authorId         String
   category         Category
   type             Type

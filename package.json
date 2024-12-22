@@ -33,6 +33,7 @@
     "nodemailer": "^6.9.16",
     "path": "^0.12.7",
     "pdfkit": "^0.15.0",
+    "pdfmake": "0.1.53",
     "pg": "^8.13.0",
     "punycode": "^2.3.1",
     "scrypt-kdf": "^3.0.0"

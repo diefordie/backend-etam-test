@@ -40,17 +40,30 @@ const publishTestService = async (testId, updateData) => {
 };
 
 const getTestService = async (testId) => {     
-    return await prisma.test.findUnique({
-            where: { id: testId },
-            include: {
-                author: true,
-                multiplechoice: {
-                    include: {
-                        option: true,
-                    },
-                },
-            },
-        });
+  return await prisma.test.findUnique({
+      where: { id: testId },
+      include: {
+          author: true,
+          multiplechoice: {
+              select: {
+                  id: true,
+                  pageName: true,
+                  question: true,
+                  number: true,
+                  questionPhoto: true,
+                  weight: true,
+                  discussion: true,
+                  option: {
+                      select: {
+                          id: true,
+                          optionDescription: true,
+                          isCorrect: true,
+                      }
+                  },
+              },
+          },
+      },
+  });
 }
 
 const getTestResult = async (resultId) => {

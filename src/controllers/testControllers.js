@@ -19,20 +19,44 @@ const createTestController = async (req, res, next) => {
 };
 
 const getTest = async (req, res) => {
+    const { id } = req.params; // Asumsikan ID tes dikirim sebagai parameter URL
+
     try {
-        const { id } = req.params; // Ubah testId menjadi id
-        console.log('ID Test yang dicari:', id);
         const test = await getTestService(id);
 
-        res.status(200).send({
-            data: test,
-            message: 'Get test success',
-        });
+        if (!test) {
+            return res.status(404).json({ message: 'Test not found' });
+        }
+
+        // Anda bisa melakukan transformasi data di sini jika diperlukan
+        const formattedTest = {
+            id: test.id,
+            title: test.title,
+            description: test.testDescription,
+            author: {
+                id: test.author.id,
+                name: test.author.name
+            },
+            questions: test.multiplechoice.map(question => ({
+                id: question.id,
+                pageName: question.pageName,
+                questionText: question.question,
+                questionNumber: question.number,
+                questionPhoto: question.questionPhoto,
+                weight: question.weight,
+                discussion: question.discussion,
+                options: question.option.map(opt => ({
+                    id: opt.id,
+                    description: opt.optionDescription,
+                    isCorrect: opt.isCorrect
+                }))
+            }))
+        };
+
+        res.status(200).json(formattedTest);
     } catch (error) {
-        res.status(500).send({
-            message: 'Failed to get test',
-            error: error.message,
-        });
+        console.error('Error fetching test:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
