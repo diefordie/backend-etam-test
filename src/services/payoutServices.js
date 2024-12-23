@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
 
-const sendPayout = async (bodyData, token) => {
+export const sendPayout = async (bodyData, token) => {
     try {
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         const usersId = decodedToken.id;
@@ -91,4 +91,27 @@ const sendPayout = async (bodyData, token) => {
     }
 };
 
-export default sendPayout;
+export const getTransactionHistoryService = async (authorId) => {
+    try {
+      const transactions = await prisma.withdrawal.findMany({
+        where: {
+          authorId: authorId,
+        },
+        select: {
+          createdAt: true,
+          amount: true,
+          reference: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      console.log("hasil: ", transactions);
+  
+      return transactions;
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      throw new Error('Failed to fetch transaction history');
+    }
+  };
