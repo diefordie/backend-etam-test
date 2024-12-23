@@ -1,8 +1,11 @@
-import sendPayout from '../services/payoutServices.js';
+import { getTransactionHistoryService, sendPayout } from '../services/payoutServices.js';
+import { PrismaClient } from '@prisma/client';
 
-const createPayout = async (req, res) => {
+const prisma = new PrismaClient();
+
+export const createPayout = async (req, res) => {
     try {
-        const {...bodyData } = req.body; // Ambil authorId dan data lainnya dari body
+        const {...bodyData } = req.body;
 
         const token = req.headers.authorization?.split(' ')[1];
         if (!token) {
@@ -25,4 +28,25 @@ const createPayout = async (req, res) => {
     }
 };
 
-export default createPayout;
+export const getTransactionHistory = async (req, res) => {
+    try {
+      const userId = req.user.id; 
+
+      const author = await prisma.author.findFirst({
+        where: { userId: userId },
+        select: {
+          id: true,
+        },
+      });
+
+      const authorId = author.id;
+      console.log('Author ID:', authorId);
+  
+      const transactions = await getTransactionHistoryService(authorId);
+  
+      res.json(transactions);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Failed to fetch transaction history' });
+    }
+  };

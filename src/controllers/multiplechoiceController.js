@@ -31,14 +31,12 @@ const createMultipleChoice = async (req, res) => {
             questions.map(async (question) => {
                 const questionData = { ...question };
 
-                // Cek apakah ada file yang diunggah untuk soal ini
                 if (req.files && req.files[index]) {
-                    const fileBuffer = req.files[index].buffer; // Ambil buffer dari file
-                    const fileName = `questions/${Date.now()}_${req.files[index].originalname}`; // Buat nama file unik
+                    const fileBuffer = req.files[index].buffer; 
+                    const fileName = `questions/${Date.now()}_${req.files[index].originalname}`; 
 
-                    // Upload ke Firebase
                     const imageUrl = await uploadFileToStorage(fileBuffer, fileName);
-                    questionData.questionPhoto = imageUrl; // Simpan URL gambar di questionData
+                    questionData.questionPhoto = imageUrl; 
                 }
 
                 return questionData;
@@ -63,8 +61,8 @@ export { createMultipleChoice };
 
 const updateMultipleChoice = async (req, res) => {
     try {
-        const { multiplechoiceId } = req.params; // Ambil multiplechoiceId dari URL
-        const updatedData = req.body; // Ambil updatedData dari body JSON
+        const { multiplechoiceId } = req.params; 
+        const updatedData = req.body; 
 
         if (!multiplechoiceId || !updatedData) {
             return res.status(400).send({
