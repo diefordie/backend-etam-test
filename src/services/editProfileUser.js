@@ -240,3 +240,73 @@ export const getHandphoneNum = async (userId) => {
     throw new Error(`Failed to get handphone number: ${error.message}`);
   }
 };
+
+export const deleteAuthorPhoto = async (userId) => {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { author: true },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Menghapus userPhoto
+    if (user.userPhoto && user.userPhoto !== "") {
+      const filePath = user.userPhoto.split(STORAGE_URL)[1] || "";
+      if (filePath) {
+        const file = bucket.file(filePath);
+        const [exists] = await file.exists();
+        if (exists) {
+          await file.delete(); // Hapus file jika ada
+        } else {
+          console.warn(`File not found: ${filePath}`);
+        }
+      }
+    }
+
+    let updatedAuthor = null;
+
+    // Menghapus authorPhoto
+    if (user.author && user.author.length > 0) {
+      const author = user.author[0];
+      if (author.authorPhoto && author.authorPhoto !== "") {
+        const filePath = author.authorPhoto.split(STORAGE_URL)[1] || "";
+        if (filePath) {
+          const file = bucket.file(filePath);
+          const [exists] = await file.exists();
+          if (exists) {
+            await file.delete(); // Hapus file jika ada
+          } else {
+            console.warn(`File not found: ${filePath}`);
+          }
+        }
+      }
+
+      updatedAuthor = await prisma.author.update({
+        where: { id: author.id },
+        data: { authorPhoto: null },
+      });
+    }
+
+    // Update userPhoto menjadi null
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { userPhoto: null },
+    });
+
+    return {
+      message: "Photo deleted successfully from user and author",
+      user: updatedUser,
+      author: updatedAuthor,
+    };
+  } catch (error) {
+    console.error("Error deleting photo:", error);
+    throw new Error(`Failed to delete photo: ${error.message}`);
+  }
+};

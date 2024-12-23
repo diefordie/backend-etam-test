@@ -10,7 +10,8 @@ import {
   updateAuthorName,
   updateAuthorHandphone,
   updateAuthorPhoto,
-  getHandphoneNum
+  getHandphoneNum,
+  deleteAuthorPhoto
 } from '../services/editProfileUser.js';
 import { uploadFileToStorage } from '../../firebase/firebaseBucket.js';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
@@ -184,23 +185,19 @@ export const updateAuthorHandphoneController = async (req, res) => {
 
 export const updateAuthorPhotoController = async (req, res) => {
   const userId = req.user.id;
-  const file = req.file;  // Ambil file dari request
+  const file = req.file;
 
   if (!file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
   try {
-    // Mengunggah file ke storage (misalnya Firebase)
     const destination = `profiles/${Date.now()}_${file.originalname}`;
-    const userPhotoUrl = await uploadFileToStorage(file.buffer, destination); // Fungsi upload ke storage
-
-    // Validasi URL yang dihasilkan
+    const userPhotoUrl = await uploadFileToStorage(file.buffer, destination);
     if (!userPhotoUrl || typeof userPhotoUrl !== 'string' || userPhotoUrl.trim() === '') {
       return res.status(400).json({ message: 'Invalid photo URL provided' });
     }
 
-    // Perbarui foto di tabel User dan Author berdasarkan userId
     const { updatedUser, updatedAuthor } = await updateAuthorPhoto(userId, userPhotoUrl);
 
     return res.status(200).json({
@@ -238,5 +235,20 @@ export const getHandphoneController = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+export const handleDeletePhoto = async (req, res) => {
+  const userId = req.user.id;  // Assuming authenticateToken middleware adds user info to req.user
+  
+  if (!userId) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  try {
+    const result = await deleteAuthorPhoto(userId);
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };

@@ -9,7 +9,8 @@ import {
   updateAuthorNameController,
   updateAuthorHandphoneController,
   updateAuthorPhotoController,
-  getHandphoneController
+  getHandphoneController,
+  handleDeletePhoto
 } from '../controllers/editProfileUser.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 import { 
@@ -95,6 +96,11 @@ router.patch(
   updateAuthorPhotoController
 );
 
+router.delete(
+  '/profile/author/photo', 
+  authenticateToken, 
+  handleDeletePhoto);
+  
 // Route untuk mendapatkan data user dan author berdasarkan userId
 router.get("/profile/handphoneNum/:userId", authenticateToken, getHandphoneController);
 

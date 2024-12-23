@@ -2,6 +2,7 @@ import { createUser } from '../services/auth/registrasi.js';
 import loginUser from '../services/auth/login.js';
 import { logoutUser } from '../services/auth/logout.js';
 import { forgotPasswordService } from '../services/auth/forgot-password.js';
+import { resetPassword } from '../services/auth/resetPassword.js';
 import adminFirebase from '../../firebase/firebaseAdmin.js';
 import prisma from '../../prisma/prismaClient.js';
 
@@ -62,6 +63,30 @@ const getFriendlyErrorMessage = (errorMessage) => {
 export const login = async (req, res) => {
     const { email, password } = req.body;
 
+    // Validasi input kosong
+    const errors = [];
+    if (!email) {
+        errors.push({
+            type: "field",
+            value: "",
+            msg: "Email tidak boleh kosong",
+            path: "email",
+            location: "body",
+        });
+    }
+    if (!password) {
+        errors.push({
+            type: "field",
+            value: "",
+            msg: "Password tidak boleh kosong",
+            path: "password",
+            location: "body",
+        });
+    }
+    if (errors.length > 0) {
+        return res.status(400).json({ errors });
+    }
+
     try {
         const userData = await loginUser({ email, password });
 
@@ -80,27 +105,19 @@ export const login = async (req, res) => {
         console.error('Login Error:', error.message);
 
         const errorResponses = {
-            EMAIL_AND_PASSWORD_REQUIRED: { status: 400, message: 'Email dan password wajib diisi.' },
             USER_NOT_FOUND: { status: 404, message: 'Akun tidak ditemukan. Pastikan Anda sudah mendaftar.' },
-            INVALID_PASSWORD_FORMAT: { status: 400, message: 'Format password tidak sesuai. Coba lagi!' },
-            INVALID_PASSWORD: { status: 400, message: 'Password salah. Coba cek kembali.' },
-            AUTHOR_NOT_APPROVED: { status: 403, message: 'Akun Anda belum disetujui. Tunggu konfirmasi dari admin.' },
-            ADMIN_NOT_ALLOWED: { status: 403, message: 'Login untuk admin tidak diperbolehkan di sini.' },
-            USER_NOT_FOUND_IN_FIREBASE: { status: 404, message: 'Akun tidak ditemukan. Pastikan Anda sudah mendaftar.' },
-            EMAIL_NOT_VERIFIED: { status: 400, message: 'Email belum diverifikasi. Cek inbox email Anda untuk konfirmasi.' },
-            USER_NOT_FOUND_IN_FIRESTORE: { status: 404, message: 'Akun tidak ditemukan. Pastikan Anda sudah mendaftar.' },
+            INVALID_PASSWORD: { status: 401, message: 'Password salah. Cek kembali password Anda.' },
+            EMAIL_NOT_VERIFIED: { status: 400, message: 'Email Anda belum diverifikasi. Silakan periksa inbox email Anda.' },
         };
 
-        // Tentukan respons berdasarkan pesan error
         const response = errorResponses[error.message] || {
             status: 500,
-            message: 'Ada kesalahan saat login. Silakan coba lagi.',
+            message: 'Terjadi kesalahan internal pada server. Silakan coba lagi.',
         };
 
         return res.status(response.status).json({ message: response.message });
     }
 };
-
 
 export const logout = async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -145,7 +162,6 @@ export const forgotPassword = async (req, res) => {
     }
 };
 
-import { resetPassword } from '../services/auth/resetPassword.js';
 
 
 
