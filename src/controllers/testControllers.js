@@ -33,6 +33,9 @@ const getTest = async (req, res) => {
             id: test.id,
             title: test.title,
             description: test.testDescription,
+            category: test.category,
+            similarity: test.similarity,
+            price: test.price,
             author: {
                 id: test.author.id,
                 name: test.author.name
