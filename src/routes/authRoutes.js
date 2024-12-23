@@ -1,5 +1,5 @@
 import express from 'express';
-import { registrasi, login, logout } from '../controllers/authController.js';
+import { registrasi, login, logout, forgotPassword, resetPasswordController } from '../controllers/authController.js';
 
 const router = express.Router();
 
@@ -12,6 +12,9 @@ router.post('/login', login);
 // Route untuk logout
 router.post('/logout', logout);
 
-router.get('/verified-email');
+
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPasswordController);
+
 
 export default router;

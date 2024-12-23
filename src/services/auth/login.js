@@ -1,8 +1,8 @@
-import scrypt from 'scrypt-kdf';
 import prisma from '../../../prisma/prismaClient.js';
 import adminFirebase from '../../../firebase/firebaseAdmin.js';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { validatePassword } from './utils/hash.js';
 
 dotenv.config();
 export const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
@@ -15,11 +15,17 @@ const loginUser = async ({ email, password }) => {
             throw new Error('USER_NOT_FOUND');
         }
 
+        // Verifikasi password menggunakan fungsi validatePassword
+        const isPasswordValid = validatePassword(password, user.password);
         
+        if (!isPasswordValid) {
+            throw new Error('INVALID_PASSWORD');
+        }
+
         // Cek keberadaan pengguna di Firebase Authentication
         let firebaseUser;
         try {
-            firebaseUser = await adminFirebase.auth().getUser(user.id); // Gunakan UID dari PostgreSQL
+            firebaseUser = await adminFirebase.auth().getUser(user.id);
         } catch (error) {
             if (error.code === 'auth/user-not-found') {
                 throw new Error('USER_NOT_FOUND_IN_FIREBASE');

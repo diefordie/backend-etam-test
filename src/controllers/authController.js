@@ -1,6 +1,7 @@
 import { createUser } from '../services/auth/registrasi.js';
 import loginUser from '../services/auth/login.js';
 import { logoutUser } from '../services/auth/logout.js';
+import { forgotPasswordService } from '../services/auth/forgot-password.js';
 import adminFirebase from '../../firebase/firebaseAdmin.js';
 import prisma from '../../prisma/prismaClient.js';
 
@@ -116,5 +117,60 @@ export const logout = async (req, res) => {
     } catch (error) {
         console.error('Logout error:', error);
         return res.status(500).json({ message: 'Ada masalah saat logout. Coba lagi, ya.' });
+    }
+};
+
+
+export const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+    }
+
+    try {
+        const result = await forgotPasswordService(email);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in forgotPassword controller:', error);
+        if (error.message === 'Email not found in database' ||
+            error.message === 'Email not found in Firebase Auth' ||
+            error.message === 'Email not found in Firestore') {
+            res.status(404).json({ message: error.message });
+        } else if (error.message === 'FORGOT_PASSWORD_ERROR') {
+            res.status(400).json({ message: 'Failed to send password reset email' });
+        } else {
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    }
+};
+
+import { resetPassword } from '../services/auth/resetPassword.js';
+
+
+
+export const resetPasswordController = async (req, res) => {
+    const { oobCode, newPassword } = req.body;
+
+    if (!oobCode || !newPassword) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+    }
+
+    try {
+        const result = await resetPassword(oobCode, newPassword);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in resetPasswordController:', error);
+        if (error.message === 'INVALID_OOB_CODE') {
+            res.status(400).json({ message: 'Invalid or expired reset link' });
+        } else if (error.message === 'WEAK_PASSWORD') {
+            res.status(400).json({ message: 'Password is too weak' });
+        } else {
+            res.status(500).json({ message: 'Failed to reset password' });
+        }
     }
 };

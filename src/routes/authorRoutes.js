@@ -14,7 +14,9 @@ router.get('/get-author', getAuthor);
 router.get('/profile', getAuthorProfile);
 router.patch('/profile/edit', authenticateToken, upload.single('authorPhoto'), editAuthorProfile);
 router.get('/author-data', authenticateToken, getAuthorData);
-router.get('/authorID', authenticateToken, fetchAuthorById)
+router.get('/authorID', authenticateToken, fetchAuthorById);
+
+
 
 
 

@@ -33,3 +33,22 @@ export const sendVerificationEmail = async (email, name) => {
 
     console.log(`Verification email sent to ${email}`);
 };
+
+export const sendResetPasswordEmail = async (email) => {
+    const firebaseAuth = adminFirebase.auth();
+    const resetLink = await firebaseAuth.generatePasswordResetLink(email);
+
+    await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Reset Password',
+        html: `
+            <h1>Reset Password</h1>
+            <p>Anda telah meminta untuk mereset password Anda. Silakan klik tautan di bawah untuk mereset password:</p>
+            <a href="${resetLink}" target="_blank">Reset Password</a>
+            <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
+        `,
+    });
+
+    console.log(`Password reset email sent to ${email}`);
+};
