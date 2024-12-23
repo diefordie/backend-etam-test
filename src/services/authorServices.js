@@ -238,7 +238,6 @@ export const editAuthorProfileService = async (token, profileData, file) => {
 
 export const getAuthorDataService = async (token) => {
   try {
-    // Decode the token
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
 
     console.log("Decoded token:", decodedToken); 
@@ -248,8 +247,8 @@ export const getAuthorDataService = async (token) => {
     const author = await prisma.author.findFirst({
       where: { userId: userId },
       select: {
-        id: true,  // Ambil id dari author
-        name: true, // Ambil name dari author
+        id: true, 
+        name: true, 
       }
     });
     
@@ -262,22 +261,20 @@ export const getAuthorDataService = async (token) => {
       include: {
         user: {
           select: {
-            role: true,  // Ambil role dari user
+            role: true, 
           }
         },
         test: {
           include: {
-            history: true,  // Sertakan history dari test
+            history: true, 
           }
         }
       }
     });
 
-    // Calculate total tests and total participants
     const totalSoal = authorWithRelations.test.length;
     const totalPeserta = authorWithRelations.test.reduce((sum, test) => sum + test.history.length, 0);
 
-    // Format the response
     return {
       id: authorWithRelations.id,
       nama: authorWithRelations.name,
@@ -311,5 +308,91 @@ export const getAuthorById = async (userId) => {
   } catch (error) {
     console.error('Error fetching author by user ID:', error);
     throw error;
+  }
+};
+
+export const getTestsByAuthorService = async (token) => {
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decodedToken.id;
+
+    const author = await prisma.author.findFirst({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!author) {
+      throw new Error("Author not found");
+    }
+
+    const tests = await prisma.test.findMany({
+      where: { authorId: author.id },
+      include: {
+        author: {
+          select: {
+            name: true,
+            authorPhoto: true, 
+          },
+        },
+        _count: { select: { history: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    return tests.map(test => ({
+      id: test.id,
+      title: test.title,
+      category: test.category, 
+      similarity: test.similarity || null, 
+      authorName: test.author.name,
+      authorPhoto: test.author.authorPhoto,
+      price: test.price,
+      historyCount: test._count.history,
+    }));
+  } catch (error) {
+    console.error("Error in getTestsByAuthorService:", error);
+    throw new Error("Failed to retrieve tests by author");
+  }
+};
+
+export const searchTestsByTitleService = async (title, token) => {
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decodedToken.id; 
+
+    if (!userId) {
+      throw new Error("User ID not found in token");
+    }
+
+    const author = await prisma.author.findFirst({
+      where: { userId: userId }, 
+      select: { id: true },
+    });
+
+    if (!author) {
+      throw new Error("Author not found for this user");
+    }
+
+    const tests = await prisma.test.findMany({
+      where: {
+        title: {
+          contains: title,
+          mode: "insensitive", 
+        },
+        authorId: author.id, 
+      },
+      include: {
+        author: true, 
+        multiplechoice: true, 
+        favourite: true, 
+        _count: { select: { history: true } },
+        result: true,
+        transaction: true,
+      },
+    });
+
+    return tests;
+  } catch (error) {
+    throw new Error(`Error retrieving tests: ${error.message}`);
   }
 };

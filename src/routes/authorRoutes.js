@@ -1,7 +1,7 @@
 // src/routes/authorRoutes.js
 import express from "express";
-import { createAuthor, getAuthor, editVerifiedAuthor, getAuthorProfile, editAuthorProfile, getAuthorData, fetchAuthorById} from "../controllers/authorControllers.js";
-import { authenticateToken } from '../middleware/authMiddleware.js'; // Pastikan Anda memiliki middleware autentikasi
+import { createAuthor, getAuthor, editVerifiedAuthor, getAuthorProfile, editAuthorProfile, getAuthorData, getTestsByAuthorController, searchTestsByTitleController } from "../controllers/authorControllers.js";
+import { authenticateToken } from '../middleware/authMiddleware.js'; 
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -14,10 +14,8 @@ router.get('/get-author', getAuthor);
 router.get('/profile', getAuthorProfile);
 router.patch('/profile/edit', authenticateToken, upload.single('authorPhoto'), editAuthorProfile);
 router.get('/author-data', authenticateToken, getAuthorData);
-router.get('/authorID', authenticateToken, fetchAuthorById);
-
-
-
+router.get('/tests', authenticateToken, getTestsByAuthorController);
+router.get('/tests/search', authenticateToken, searchTestsByTitleController);
 
 
 

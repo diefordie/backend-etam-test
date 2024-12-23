@@ -73,7 +73,7 @@ export const generateDiscussionPDF = async (resultId) => {
 
         const content = [];
 
-        const logoPath = path.join(__dirname, '../../../frontend/public/images/logofix.png');
+        const logoPath = path.join(__dirname, '../../src/public/logofix.png');
         const logoBase64 = fs.readFileSync(logoPath).toString('base64');
         const logoImage = `data:image/png;base64,${logoBase64}`;
 
