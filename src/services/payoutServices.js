@@ -20,7 +20,7 @@ export const sendPayout = async (bodyData, token) => {
             throw new Error('Author atau User tidak ditemukan');
         }
 
-        const amount = bodyData.amount;
+        const amount = parseInt(bodyData.amount, 10);
 
         if (amount < 50000) {
             throw new Error('Amount harus lebih besar dari 50.000');
@@ -30,8 +30,8 @@ export const sendPayout = async (bodyData, token) => {
             throw new Error(`Saldo Anda tidak cukup. Saldo saat ini: ${author.profit}`);
         }
 
-        const beneficiaryName = author.name;
-        const beneficiaryEmail = author.user.email;
+        const beneficiaryName = bodyData.beneficiary_name;
+        const beneficiaryEmail = bodyData.beneficiary_email;
         const beneficiaryBank = bodyData.beneficiary_bank;
         const beneficiaryAccount = bodyData.beneficiary_account;
         const notes = bodyData.notes;
@@ -69,12 +69,11 @@ export const sendPayout = async (bodyData, token) => {
         });
 
         const referenceNo = response.data.payouts[0].reference_no;
-        const amounts = parseInt(amount, 10)
 
         await prisma.withdrawal.create({
             data: {
                 authorId: author.id,
-                amount: amounts,
+                amount: amount,
                 bankCode: beneficiaryBank,
                 accountNumber: beneficiaryAccount,
                 accountName: beneficiaryName,
