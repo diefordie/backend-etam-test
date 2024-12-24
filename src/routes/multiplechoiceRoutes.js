@@ -1,5 +1,5 @@
 import express from 'express';
-import { createMultipleChoice, updateMultipleChoice, getMultipleChoiceById, deleteMultipleChoice, getQuestions, updateQuestionNumber, getQuestionNumbers, getMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameController, getPagesByTestIdController } from '../controllers/multiplechoiceController.js';
+import { updateQuestionNumberDel, updateQuestionNumberPage, updateQuestionPageName, createMultipleChoice, updateMultipleChoice, getMultipleChoiceById, deleteMultipleChoice, getQuestions, updateQuestionNumber, getQuestionNumbers, getMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameController, getPagesByTestIdController } from '../controllers/multiplechoiceController.js';
 import multer from 'multer';
 
 const router = express.Router();
@@ -14,6 +14,11 @@ router.post('/add-questions', upload.array('questionPhoto'), (req, res) => {
     }
     createMultipleChoice(req, res);
 });
+
+router.put('/update-question', updateQuestionPageName); //baru
+router.put('/:testId/questions/:oldNumber', updateQuestionNumberPage); //baru
+// router.put('/question/update-number', updateQuestionNumberDel); // baru
+
 
 router.put('/update-question/:multiplechoiceId', updateMultipleChoice);
 router.put('/update-pageName', updateMultipleChoicePageNameController);

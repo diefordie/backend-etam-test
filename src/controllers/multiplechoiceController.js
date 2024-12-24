@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
 import { initializeApp } from 'firebase/app';
-import { createMultipleChoiceService, updateMultipleChoiceService, getMultipleChoiceService, getQuestionNumbersServices, updateQuestionNumberServices, getMultipleChoiceByIdService, deleteMultipleChoiceService, getQuestionsByTestId, fetchMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameService, getPagesByTestIdService } from '../services/multiplechoiceSevice.js';
+import { updatePageNameForQuestion, createMultipleChoiceService, updateMultipleChoiceService, getMultipleChoiceService, getQuestionNumbersServices, updateQuestionNumberServices, getMultipleChoiceByIdService, deleteMultipleChoiceService, getQuestionsByTestId, fetchMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameService, getPagesByTestIdService } from '../services/multiplechoiceSevice.js';
 import { Buffer } from 'buffer';
 import { uploadFileToStorage } from '../../firebase/firebaseBucket.js';
+import * as multiplechoiceService from '../services/multiplechoiceSevice.js';
 
 dotenv.config();
 
@@ -60,6 +61,72 @@ const createMultipleChoice = async (req, res) => {
 };
 
 export { createMultipleChoice }; 
+
+export const updateQuestionNumberPage = async (req, res) => {
+    try {
+      const { testId, oldNumber } = req.params;
+      const { newQuestionNumber } = req.body;
+  
+      if (!newQuestionNumber || isNaN(newQuestionNumber)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'New question number is required and must be a number' 
+        });
+      }
+  
+      const updatedQuestion = await multiplechoiceService.updateQuestionNumber(
+        testId,
+        parseInt(oldNumber),
+        parseInt(newQuestionNumber)
+      );
+  
+      return res.status(200).json({
+        success: true,
+        data: updatedQuestion,
+        message: 'Question number updated successfully'
+      });
+    } catch (error) {
+      console.error('Error in updateQuestionNumber controller:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error updating question number'
+      });
+    }
+  };
+
+  export const updateQuestionPageName = async (req, res) => {
+    const { questionNumber, pageName } = req.body;
+    console.log('Received request to update pageName for question:', req.body);
+  
+    if (!questionNumber || !pageName) {
+      return res.status(400).json({
+        success: false,
+        message: 'questionNumber and pageName are required.',
+      });
+    }
+  
+    try {
+      const result = await updatePageNameForQuestion(questionNumber, pageName);
+  
+      if (result.modifiedCount > 0) {
+        res.status(200).json({
+          success: true,
+          message: 'Page name updated successfully for the question.',
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: 'Question not found or no changes made.',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating pageName for question:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error.',
+      });
+    }
+  };
 
 const updateMultipleChoice = async (req, res) => {
     try {
