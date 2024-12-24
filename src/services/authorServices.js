@@ -287,7 +287,6 @@ export const getAuthorDataService = async (token) => {
     throw new Error("Failed to retrieve author data: " + error.message);
   }
 };
-
 export const getAuthorById = async (userId) => {
   try {
     const author = await prisma.author.findFirst({

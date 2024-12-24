@@ -8,6 +8,7 @@ import {
   getAuthorDataService,
   getTestsByAuthorService,
   searchTestsByTitleService,
+  getAuthorById,
 } from "../services/authorServices.js";
 
 export const createAuthor = async (req, res) => {
@@ -177,3 +178,39 @@ export const searchTestsByTitleController = async (req, res) => {
     });
   }
 };
+
+export const fetchAuthorById = async (req, res) => {
+  try {
+    // Ambil user ID dari token yang sudah di-decode oleh middleware
+    const userId = req.user.id
+    console.log('Received userId from token:', userId)
+
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User ID is required' 
+      })
+    }
+
+    const author = await getAuthorById(userId)
+
+    res.status(200).json({
+      success: true,
+      data: author
+    })
+  } catch (error) {
+    console.error('Error in fetchCurrentAuthor:', error)
+    
+    if (error.message === 'Author not found') {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Author not found for this user' 
+      })
+    }
+
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error' 
+    })
+  }
+}
