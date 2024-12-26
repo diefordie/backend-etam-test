@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import { initializeApp } from 'firebase/app';
-import { createMultipleChoiceService, updateMultipleChoiceService, getMultipleChoiceService, getQuestionNumbersServices, updateQuestionNumberServices, getMultipleChoiceByIdService, deleteMultipleChoiceService, getQuestionsByTestId, fetchMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameService, getPagesByTestIdService } from '../services/multiplechoiceSevice.js';
+import { updateQuestionNumberService,  updatePageNameForQuestion, createMultipleChoiceService, updateMultipleChoiceService, getQuestionNumbersServices, updateQuestionNumberServices, getMultipleChoiceByIdService, deleteQuestionAndReorderNumbers,  fetchMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameService, getPagesByTestIdService, deletePageService, updateNumberServices } from '../services/multiplechoiceSevice.js'; 
 import { Buffer } from 'buffer';
+import * as multiplechoiceService from '../services/multiplechoiceSevice.js';
 import { uploadFileToStorage } from '../../firebase/firebaseBucket.js';
 
 dotenv.config();
@@ -16,6 +17,17 @@ const firebaseConfig = {
 };
 
 initializeApp(firebaseConfig);
+
+// const extractBase64Images = (content) => {
+//     const base64Regex = /data:image\/[^;]+;base64,([^"]+)/g;
+//     const matches = content.match(base64Regex) || [];
+//     return matches;
+//   };
+  
+//   // Fungsi untuk mengganti URL gambar dalam konten
+//   const replaceImageUrlInContent = (content, oldUrl, newUrl) => {
+//     return content.replace(oldUrl, newUrl);
+// };
 
 const createMultipleChoice = async (req, res) => {
     try {
@@ -59,15 +71,49 @@ const createMultipleChoice = async (req, res) => {
 
 export { createMultipleChoice }; 
 
+export const updateQuestionPageName = async (req, res) => {
+    const { questionNumber, pageName } = req.body;
+    console.log('Received request to update pageName for question:', req.body);
+  
+    if (!questionNumber || !pageName) {
+      return res.status(400).json({
+        success: false,
+        message: 'questionNumber and pageName are required.',
+      });
+    }
+  
+    try {
+      const result = await updatePageNameForQuestion(questionNumber, pageName);
+  
+      if (result.modifiedCount > 0) {
+        res.status(200).json({
+          success: true,
+          message: 'Page name updated successfully for the question.',
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: 'Question not found or no changes made.',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating pageName for question:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error.',
+      });
+    }
+};
+
 const updateMultipleChoice = async (req, res) => {
     try {
         const { multiplechoiceId } = req.params; 
         const updatedData = req.body; 
 
         if (!multiplechoiceId || !updatedData) {
-            return res.status(400).send({
-                message: 'multiplechoiceId and updatedData are required',
-            });
+          return res.status(400).send({
+              message: 'multiplechoiceId and updatedData are required',
+          });
         }
 
         const updatedMultipleChoice = await updateMultipleChoiceService(multiplechoiceId, updatedData);
@@ -86,39 +132,6 @@ const updateMultipleChoice = async (req, res) => {
 
 export { updateMultipleChoice };
 
-const getMultipleChoice = async (req, res) => {
-    try {
-        const { testId } = req.params;  
-        const { pageName } = req.query;
-
-        if (!testId) {
-            return res.status(400).send({
-                message: 'testId is required',
-            });
-        }
-
-        const multipleChoices = await getMultipleChoiceService(testId, pageName);
-
-        if (!multipleChoices || multipleChoices.length === 0) {
-            return res.status(404).send({
-                message: 'No questions found for this test',
-            });
-        }
-
-        res.status(200).send({
-            data: multipleChoices,
-            message: 'Questions fetched successfully',
-        });
-    } catch (error) {
-        res.status(500).send({
-            message: 'Failed to fetch questions',
-            error: error.message,
-        });
-    }
-};
-
-export { getMultipleChoice };
-
 const getMultipleChoiceById = async (req, res) => {
     try {
         const { id } = req.params;  
@@ -133,55 +146,73 @@ const getMultipleChoiceById = async (req, res) => {
 
 export { getMultipleChoiceById };
 
-const deleteMultipleChoice = async (req, res) => {
-    try {
-        const { multiplechoiceId } = req.params;
+export const deleteMultiplechoice = async (req, res) => {
+  try {
+    const { multiplechoiceId } = req.params;
+    console.log('Received request to delete multiplechoice with ID:', multiplechoiceId);
+    await deleteQuestionAndReorderNumbers(multiplechoiceId);
+    res.status(200).json({ message: 'Soal berhasil dihapus' });
+  } catch (error) {
+    console.error('Error in deleteMultiplechoice:', error);
+    res.status(500).json({ message: 'Gagal menghapus soal' });
+  }
+};
 
-        if (!multiplechoiceId) {
+export const updateQuestionNumberPage = async (req, res) => {
+    try {
+      const { testId, oldNumber } = req.params;
+      const { newQuestionNumber } = req.body;
+      if (!newQuestionNumber || isNaN(newQuestionNumber)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'New question number is required and must be a number' 
+        });
+      }
+      const updatedQuestion = await multiplechoiceService.updateQuestionNumber(
+        testId,
+        parseInt(oldNumber),
+        parseInt(newQuestionNumber)
+      );
+      return res.status(200).json({
+        success: true,
+        data: updatedQuestion,
+        message: 'Question number updated successfully'
+      });
+    } catch (error) {
+      console.error('Error in updateQuestionNumber controller:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Error updating question number'
+      });
+    }
+};
+
+export const updateQuestionNumberDel = async (req, res) => {
+    try {
+        const { testId, oldNumber, newNumber } = req.body;
+        
+        // Validasi input
+        if (!testId || oldNumber === undefined || newNumber === undefined) {
             return res.status(400).json({
-                success: false,
-                message: 'multiplechoiceId is required'
+                status: 'error',
+                message: 'testId, oldNumber, dan newNumber harus diisi'
             });
         }
-
-        const result = await deleteMultipleChoiceService(multiplechoiceId);
-
-        res.status(200).json({
-            success: true,
-            message: 'Multiple choice question deleted successfully',
-            data: {
-                deletedQuestionNumber: result.deletedQuestionNumber,
-                remainingQuestionsCount: result.remainingQuestions.length,
-                updatedQuestions: result.remainingQuestions
-            }
+        const updatedQuestion = await updateQuestionNumberService(testId, oldNumber, newNumber);
+        
+        return res.status(200).json({
+            status: 'success',
+            message: 'Nomor soal berhasil diupdate',
+            data: updatedQuestion
         });
     } catch (error) {
-        console.error('Controller Error:', error);
-        res.status(error.message === 'Multiple choice question not found' ? 404 : 500).json({
-            success: false,
-            message: error.message || 'Failed to delete multiple choice question',
-            error: error.message
+        console.error('Error in updateQuestionNumber controller:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: error.message || 'Terjadi kesalahan saat mengupdate nomor soal'
         });
     }
 };
-
-export { deleteMultipleChoice };
-
-const getQuestions = async (req, res) => {
-    const { testId } = req.params; 
-    try {
-        const questions = await getQuestionsByTestId(testId);
-        if (questions.length === 0) {
-            return res.status(404).json({ message: 'Questions not found.' });
-        }
-        res.status(200).json(questions); 
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-export { getQuestions };
-
 
 const getMultipleChoiceByNumberAndTestId = async (req, res) => {
     const { testId, number, pageName } = req.params;
@@ -203,27 +234,14 @@ const getMultipleChoiceByNumberAndTestId = async (req, res) => {
 export{ getMultipleChoiceByNumberAndTestId};
 
 const updateMultipleChoicePageNameController = async (req, res) => {
-    if (req.method !== 'PUT') {
-        return res.status(405).json({ message: 'Method not allowed' });
-    }
-
+    const { testId, pageIndex, currentPageName, newPageName } = req.body;
+  
     try {
-        const { testId, number, newPageName } = req.body;
-
-        if (!newPageName) {
-            return res.status(400).json({ message: 'Page name is required' });
-        }
-
-        const result = await updateMultipleChoicePageNameService(testId, number, newPageName);
-
-        if (result.count === 0) {
-            return res.status(404).json({ message: 'Multiple choice not found or nothing to update' });
-        }
-
-        return res.status(200).json({ message: 'Page name updated successfully' });
+      const result = await updateMultipleChoicePageNameService(testId, currentPageName, newPageName);
+      res.status(200).json({ message: 'Page name updated successfully', result });
     } catch (error) {
-        console.error('Error updating page name:', error);
-        return res.status(500).json({ message: 'Failed to update page name', error: error.message });
+      console.error('Error updating pageName:', error);
+      res.status(500).json({ error: 'Failed to update page name' });
     }
 };
 
@@ -248,14 +266,14 @@ const getPagesByTestIdController = async (req, res) => {
       console.error('Error fetching pages:', error);
       return res.status(500).json({ message: 'Failed to fetch pages', error: error.message });
     }
-  };
+};
   
-  export { getPagesByTestIdController };
+export { getPagesByTestIdController };
 
-  const getQuestionNumbers = async (req, res) => {
+const getQuestionNumbers = async (req, res) => {
     try {
-      const { testId } = req.params;
-      const questionNumbers = await getQuestionNumbersServices(testId);
+      const { testId, category } = req.params;
+      const questionNumbers = await getQuestionNumbersServices(testId, category);
       res.json({ questionNumbers });
     } catch (error) {
       res.status(500).json({ error: 'Error getting question numbers' });
@@ -283,3 +301,65 @@ const getPagesByTestIdController = async (req, res) => {
     getQuestionNumbers,
     updateQuestionNumber,
   };
+
+export const deletePageController = async (req, res) => {
+    try {
+        const { testId, pageName } = req.body;
+
+        // Validasi input
+        if (!testId || !pageName) {
+            return res.status(400).json({
+                success: false,
+                message: "testId dan pageName wajib diisi.",
+            });
+        }
+
+        // Panggil service untuk menghapus halaman
+        const result = await deletePageService(testId, pageName);
+
+        if (result.success) {
+            return res.status(200).json({
+                success: true,
+                message: "Halaman berhasil dihapus.",
+            });
+        } else {
+            return res.status(500).json({
+                success: false,
+                message: "Terjadi kesalahan saat menghapus halaman.",
+            });
+        }
+    } catch (error) {
+        console.error('Error in deletePageController:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Terjadi kesalahan pada server.",
+        });
+    }
+  };
+
+  export const updateNumberController = async (req, res) => {
+    try {
+      const { testId, oldNumber, newNumber } = req.body;
+  
+      if (!testId || oldNumber === undefined || newNumber === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: "testId, oldNumber, dan newNumber wajib diisi.",
+        });
+      }
+  
+      await updateQuestionNumberService(testId, oldNumber, newNumber);
+  
+      return res.status(200).json({
+        success: true,
+        message: "Nomor soal berhasil diperbarui.",
+      });
+    } catch (error) {
+      console.error('Error in updateQuestionNumberController:', error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan pada server.",
+      });
+    }
+  };
+  

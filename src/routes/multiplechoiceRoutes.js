@@ -1,5 +1,5 @@
 import express from 'express';
-import { createMultipleChoice, updateMultipleChoice, getMultipleChoiceById, deleteMultipleChoice, getQuestions, updateQuestionNumber, getQuestionNumbers, getMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameController, getPagesByTestIdController } from '../controllers/multiplechoiceController.js';
+import {  updateQuestionNumberDel, updateQuestionNumberPage, updateQuestionPageName, createMultipleChoice, updateMultipleChoice, getMultipleChoiceById, deleteMultiplechoice,  updateQuestionNumber, getQuestionNumbers, getMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameController, getPagesByTestIdController, deletePageController, updateNumberController } from '../controllers/multiplechoiceController.js';
 import multer from 'multer';
 
 const router = express.Router();
@@ -15,17 +15,18 @@ router.post('/add-questions', upload.array('questionPhoto'), (req, res) => {
     createMultipleChoice(req, res);
 });
 
-router.put('/update-question/:multiplechoiceId', updateMultipleChoice);
-router.put('/update-pageName', updateMultipleChoicePageNameController);
-router.put('/update-questionNumber', updateQuestionNumber);
-
-router.get('/questions/:testId', getQuestions);
-// router.get('/questions/:testId', getMultipleChoice);
-router.get('/question/:id', getMultipleChoiceById);
-// router.get('/:testId', getQuestions);
-router.get('/:testId/:number', getMultipleChoiceByNumberAndTestId);
-router.get('/get-pages/:testId', getPagesByTestIdController);
-router.delete('/question/:multiplechoiceId', deleteMultipleChoice);
-router.get('/getQuestionNumbers', getQuestionNumbers);
+router.put('/update-question/:multiplechoiceId', updateMultipleChoice); //perlu
+router.put('/update-question', updateQuestionPageName);
+router.put('/update-pageName', updateMultipleChoicePageNameController); //perlu
+router.put('/:testId/questions/:oldNumber', updateQuestionNumberPage);
+router.put('/question/update-number', updateQuestionNumberDel);
+router.get('/question/:id', getMultipleChoiceById); //perlu
+router.delete('/question/:multiplechoiceId', deleteMultiplechoice); //perlu
+router.get('/:testId/:number', getMultipleChoiceByNumberAndTestId); //perlu
+router.get('/get-pages/:testId', getPagesByTestIdController); //perlu
+router.get('/getQuestionNumbers', getQuestionNumbers); //perlu
+router.put('/update-questionNumber', updateQuestionNumber); //perlu
+router.delete('/delete-page', deletePageController);
+router.put('/update-number', updateNumberController);
 
 export default router; 
