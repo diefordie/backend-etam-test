@@ -6,6 +6,7 @@ const getTestDetailsWithAccessCountAndAuthor = async (testIds) => {
   try {
     const tests = await prisma.test.findMany({
       where: {
+        isPublished: true,
         id: {
           in: testIds,
         },
@@ -26,7 +27,7 @@ const getTestDetailsWithAccessCountAndAuthor = async (testIds) => {
       accessCount: test.history.length,
       author: {
         name: test.author.name,
-        foto: test.author.authorPhoto,
+        authorPhoto: test.author.authorPhoto,
       },
     }));
 
@@ -40,6 +41,9 @@ const getTestDetailsWithAccessCountAndAuthor = async (testIds) => {
 export const getPopularTestsService = async () => {
   try {
     const popularTests = await prisma.test.findMany({
+      where: {
+        isPublished: true,
+      },
       include: {
         history: true, 
         author: {
@@ -56,7 +60,7 @@ export const getPopularTestsService = async () => {
       accessCount: test.history.length, 
       author: {
         name: test.author.name,
-        foto: test.author.authorPhoto,
+        authorPhoto: test.author.authorPhoto,
       },
     }));
 
@@ -74,6 +78,7 @@ export const getPopularTestsService = async () => {
 export const getFreeTestsService = async () => {
   const freeTests = await prisma.test.findMany({
     where: {
+      isPublished: true,
       price: 0,
     },
     include: {
@@ -94,6 +99,7 @@ export const getFreeTestsService = async () => {
 export const getLockedTestsService = async () => {
   const lockedTests = await prisma.test.findMany({
     where: {
+      isPublished: true,
       price: { gt: 0 },
     },
     include: {
@@ -114,6 +120,7 @@ export const getLockedTestsService = async () => {
 export const searchTestsByTitleService = async (title) => {
   const tests = await prisma.test.findMany({
     where: {
+      isPublished: true,
       title: { contains: title, mode: "insensitive" },
     },
   });
@@ -126,6 +133,7 @@ export const searchTestsByTitleService = async (title) => {
 export const searchTestsByTitleAndCategoryService = async (title, category) => {
   const tests = await prisma.test.findMany({
     where: {
+      isPublished: true,
       AND: [
         { title: { contains: title, mode: "insensitive" } },
         { category: category },
@@ -140,7 +148,10 @@ export const searchTestsByTitleAndCategoryService = async (title, category) => {
 
 export const getTestsByCategoryService = async (category) => {
   const tests = await prisma.test.findMany({
-    where: { category },
+    where: {
+      isPublished: true,
+      category: category,
+    },
     include: {
       history: true,
       author: {
@@ -162,6 +173,7 @@ export const getPopularTestsByCategoryService = async (category) => {
     const popularTests = await prisma.test.findMany({
       where: {
         category: category,
+        isPublished: true,
       },
       include: {
         history: true,
@@ -179,7 +191,7 @@ export const getPopularTestsByCategoryService = async (category) => {
       accessCount: test.history.length, 
       author: {
         name: test.author.name,
-        foto: test.author.authorPhoto,
+        authorPhoto: test.author.authorPhoto,
       },
     }));
 
@@ -197,6 +209,7 @@ export const getPopularTestsByCategoryService = async (category) => {
 export const getFreeTestsByCategoryService = async (category) => {
   const freeTests = await prisma.test.findMany({
     where: {
+      isPublished: true,
       category: category,
       price: 0,
     },
@@ -218,6 +231,7 @@ export const getFreeTestsByCategoryService = async (category) => {
 export const getLockedTestsByCategoryService = async (category) => {
   const lockedTests = await prisma.test.findMany({
     where: {
+      isPublished: true,
       category: category,
       price: { gt: 0 },
     },
