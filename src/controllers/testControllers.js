@@ -51,7 +51,9 @@ const getTest = async (req, res) => {
                 options: question.option.map(opt => ({
                     id: opt.id,
                     description: opt.optionDescription,
-                    isCorrect: opt.isCorrect
+                    isCorrect: opt.isCorrect,
+                    optionPhoto: opt.optionPhoto,
+                    points: opt.points
                 }))
             }))
         };

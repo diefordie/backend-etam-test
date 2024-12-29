@@ -107,6 +107,7 @@ model Multiplechoice {
   option           Option[]
 }
 
+
 model Result {
   id                String       @id @default(cuid())
   testId           String
@@ -144,6 +145,7 @@ model Option {
   id                String       @id @default(cuid())
   multiplechoiceId String
   optionDescription String
+  optionPhoto       String?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   points            Int?

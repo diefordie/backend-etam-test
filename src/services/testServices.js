@@ -58,6 +58,8 @@ const getTestService = async (testId) => {
                           id: true,
                           optionDescription: true,
                           isCorrect: true,
+                          optionPhoto: true, 
+                          points: true, 
                       }
                   },
               },
