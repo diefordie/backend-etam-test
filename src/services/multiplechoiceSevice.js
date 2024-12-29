@@ -3,8 +3,6 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const createMultipleChoiceService = async (testId, questions) => {
-    console.log("testId:", testId);
-    console.log("questions:", questions);
     
     const multipleChoices = await Promise.all(
         questions.map(async (question) => {
@@ -149,9 +147,7 @@ export const deleteQuestionAndReorderNumbers = async (multiplechoiceId) => {
       if (!questionToDelete) {
         throw new Error('Soal tidak ditemukan');
       }
-  
-      console.log('Deleting question:', { id: multiplechoiceId, number: questionToDelete.number });
-  
+    
       // Hapus soal yang ditargetkan
       await tx.multiplechoice.delete({
         where: { id: multiplechoiceId },
@@ -166,10 +162,7 @@ export const deleteQuestionAndReorderNumbers = async (multiplechoiceId) => {
         orderBy: { number: 'desc' },
         select: { id: true, number: true },
       });
-  
-      console.log('Questions to update:', questionsToUpdate);
-  
-      // Perbarui nomor setiap soal
+    
       const updates = [];
       for (const question of questionsToUpdate) {
         const newNumber = question.number - 1;
@@ -178,13 +171,52 @@ export const deleteQuestionAndReorderNumbers = async (multiplechoiceId) => {
           data: { number: newNumber }
         });      
   
-        console.log(`Updated: ${question.id} from ${question.number} to ${newNumber}`);
         updates.push(result);
       }
   
       return updates;
     });
 };
+
+export const findPreviousQuestion = async (testId, number) => {
+  return await prisma.$transaction(async (tx) => {
+    const previousQuestion = await tx.multiplechoice.findFirst({
+      where: {
+        testId: testId,
+        number: { lt: parseInt(number, 10) },
+      },
+      orderBy: { number: 'desc' },
+    });
+
+    if (!previousQuestion) {
+      throw new Error('Tidak ditemukan soal dengan nomor lebih kecil.');
+    }
+
+    const questionsToUpdate = await tx.multiplechoice.findMany({
+      where: {
+        testId: testId,
+        number: { gt: previousQuestion.number },
+      },
+      orderBy: { number: 'asc' },
+    });
+
+    const updates = [];
+    for (const question of questionsToUpdate) {
+      const newNumber = question.number - 1;
+      const updatedQuestion = await tx.multiplechoice.update({
+        where: { id: question.id },
+        data: { number: newNumber },
+      });
+      updates.push(updatedQuestion);
+    }
+
+    return {
+      multiplechoiceId: previousQuestion.id,
+      updatedQuestions: updates,
+    };
+  });
+};
+
 
 export const updateQuestionNumber = async (testId, oldNumber, newNumber) => {
     try {
@@ -218,7 +250,6 @@ export const updateQuestionNumber = async (testId, oldNumber, newNumber) => {
 
 export const updateQuestionNumberService = async (testId, oldNumber, newNumber) => {
     try {
-        console.log("data: ", testId, oldNumber, newNumber);
         const updatedQuestion = await prisma.multiplechoice.updateMany({
             where: {
                 testId: testId,
@@ -229,7 +260,6 @@ export const updateQuestionNumberService = async (testId, oldNumber, newNumber) 
             }
         });
 
-        console.log("update: ", updatedQuestion)
         if (updatedQuestion.count === 0) {
             throw new Error('Soal tidak ditemukan');
         }
@@ -291,7 +321,6 @@ const updateMultipleChoicePageNameService = async (testId, currentPageName, newP
         },
       });
   
-      console.log('Update result:', result);
       return result;
   
     } catch (error) {
@@ -329,8 +358,6 @@ const getQuestionNumbersServices = async (testId, category) => {
   };
 
   const updateQuestionNumberServices = async (testId, oldNumber, newNumber) => {
-    console.log('Updating question numbers in database:');
-    console.log(`testId: ${testId}, oldNumber: ${oldNumber}, newNumber: ${newNumber}`);
 
     await prisma.multiplechoice.updateMany({
       where: {
@@ -345,8 +372,6 @@ const getQuestionNumbersServices = async (testId, category) => {
         },
       },
     });
-
-    console.log('Question numbers updated successfully');
   };
 
   export{
@@ -401,7 +426,5 @@ export const updateNumberServices = async (testId, oldNumber, newNumber) => {
       data: {
         number: newNumber
       }
-    });
-  
-    console.log('Question number updated successfully');
+    });  
 };

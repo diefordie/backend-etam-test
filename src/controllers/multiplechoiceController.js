@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { initializeApp } from 'firebase/app';
-import { updateQuestionNumberService,  updatePageNameForQuestion, createMultipleChoiceService, updateMultipleChoiceService, getQuestionNumbersServices, updateQuestionNumberServices, getMultipleChoiceByIdService, deleteQuestionAndReorderNumbers,  fetchMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameService, getPagesByTestIdService, deletePageService, updateNumberServices } from '../services/multiplechoiceSevice.js'; 
+import { findPreviousQuestion, updateQuestionNumberService,  updatePageNameForQuestion, createMultipleChoiceService, updateMultipleChoiceService, getQuestionNumbersServices, updateQuestionNumberServices, getMultipleChoiceByIdService, deleteQuestionAndReorderNumbers,  fetchMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameService, getPagesByTestIdService, deletePageService, updateNumberServices } from '../services/multiplechoiceSevice.js'; 
 import { Buffer } from 'buffer';
 import * as multiplechoiceService from '../services/multiplechoiceSevice.js';
 import { uploadFileToStorage } from '../../firebase/firebaseBucket.js';
@@ -73,7 +73,6 @@ export { createMultipleChoice };
 
 export const updateQuestionPageName = async (req, res) => {
     const { questionNumber, pageName } = req.body;
-    console.log('Received request to update pageName for question:', req.body);
   
     if (!questionNumber || !pageName) {
       return res.status(400).json({
@@ -136,7 +135,6 @@ const getMultipleChoiceById = async (req, res) => {
     try {
         const { id } = req.params;  
         const multipleChoice = await getMultipleChoiceByIdService(id);
-        console.log("Multiple choice fetched:", multipleChoice);
         res.status(200).json(multipleChoice);
     } catch (error) {
         console.error("Error fetching multiple choice:", error.message);
@@ -149,7 +147,7 @@ export { getMultipleChoiceById };
 export const deleteMultiplechoice = async (req, res) => {
   try {
     const { multiplechoiceId } = req.params;
-    console.log('Received request to delete multiplechoice with ID:', multiplechoiceId);
+    const actualMultiplechoiceId = req.body;
     await deleteQuestionAndReorderNumbers(multiplechoiceId);
     res.status(200).json({ message: 'Soal berhasil dihapus' });
   } catch (error) {
@@ -212,6 +210,23 @@ export const updateQuestionNumberDel = async (req, res) => {
             message: error.message || 'Terjadi kesalahan saat mengupdate nomor soal'
         });
     }
+};
+
+export const getPreviousQuestion = async (req, res) => {
+  const { testId, number } = req.params;
+
+  try {
+    const question = await findPreviousQuestion(testId, number);
+
+    if (!question) {
+      return res.status(404).json({ message: 'Soal sebelumnya tidak ditemukan' });
+    }
+
+    res.json({ multiplechoiceId: question.id });
+  } catch (error) {
+    console.error('Error fetching previous question:', error);
+    res.status(500).json({ message: 'Terjadi kesalahan saat mencari soal sebelumnya' });
+  }
 };
 
 const getMultipleChoiceByNumberAndTestId = async (req, res) => {
@@ -284,10 +299,6 @@ const getQuestionNumbers = async (req, res) => {
     try {
       const { testId } = req.params;
       const { oldNumber, newNumber } = req.body;
-  
-      console.log('Received request to update question numbers:');
-      console.log(`testId: ${testId}`);
-      console.log(`oldNumber: ${oldNumber}, newNumber: ${newNumber}`);
   
       await updateQuestionNumberServices(testId, oldNumber, newNumber);
       res.json({ message: 'Question numbers updated successfully' });

@@ -1,5 +1,5 @@
 import express from 'express';
-import {  updateQuestionNumberDel, updateQuestionNumberPage, updateQuestionPageName, createMultipleChoice, updateMultipleChoice, getMultipleChoiceById, deleteMultiplechoice,  updateQuestionNumber, getQuestionNumbers, getMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameController, getPagesByTestIdController, deletePageController, updateNumberController } from '../controllers/multiplechoiceController.js';
+import {  getPreviousQuestion, updateQuestionNumberDel, updateQuestionNumberPage, updateQuestionPageName, createMultipleChoice, updateMultipleChoice, getMultipleChoiceById, deleteMultiplechoice,  updateQuestionNumber, getQuestionNumbers, getMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameController, getPagesByTestIdController, deletePageController, updateNumberController } from '../controllers/multiplechoiceController.js';
 import multer from 'multer';
 
 const router = express.Router();
@@ -28,5 +28,6 @@ router.get('/getQuestionNumbers', getQuestionNumbers); //perlu
 router.put('/update-questionNumber', updateQuestionNumber); //perlu
 router.delete('/delete-page', deletePageController);
 router.put('/update-number', updateNumberController);
+router.get('/previous-question/:testId/:number', getPreviousQuestion);
 
 export default router; 
