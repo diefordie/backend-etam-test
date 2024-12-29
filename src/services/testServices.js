@@ -73,7 +73,7 @@ const getTestResult = async (resultId) => {
       where: { id: resultId },
       select: {
         score: true,
-        createdAt: true, // Tambahkan ini untuk mengambil createdAt
+        createdAt: true,
         user: {
           select: { name: true },
         },
@@ -84,6 +84,7 @@ const getTestResult = async (resultId) => {
             multiplechoice: {
               select: {
                 question: true,
+                pageName: true,  // Tambahkan ini untuk mendapatkan nama halaman
               },
             },
           },
@@ -93,6 +94,14 @@ const getTestResult = async (resultId) => {
             option: {
               select: {
                 isCorrect: true,
+                points: true,  // Tambahkan ini untuk mendapatkan poin
+                multiplechoice: {
+                  select: {
+                    pageName: true,
+                    weight: true,  // Tambahkan ini untuk mendapatkan bobot
+                    isWeighted: true,  // Tambahkan ini untuk mengetahui apakah soal berbobot atau tidak
+                  },
+                },
               },
             },
             status: true,
@@ -114,6 +123,24 @@ const getTestResult = async (resultId) => {
       (detail) => detail.status === "final" && detail.option.isCorrect === false
     ).length;
 
+    // Hitung pageScores
+    const pageScores = {};
+    latestTestResult.detail_result.forEach((detail) => {
+      const pageName = detail.option.multiplechoice.pageName;
+      if (detail.status === "final") {
+        if (!pageScores[pageName]) {
+          pageScores[pageName] = 0;
+        }
+        if (!detail.option.multiplechoice.isWeighted && detail.option.multiplechoice.weight) {
+          // Jika soal berbobot
+          pageScores[pageName] += detail.option.isCorrect ? detail.option.multiplechoice.weight : 0;
+        } else if (detail.option.points !== null) {
+          // Jika soal menggunakan sistem poin (seperti TKP)
+          pageScores[pageName] += detail.option.points;
+        }
+      }
+    });
+
     return {
       score: latestTestResult.score,
       userName: latestTestResult.user.name,
@@ -121,7 +148,8 @@ const getTestResult = async (resultId) => {
       testTitle: latestTestResult.test.title,
       correctAnswers,
       wrongAnswers,
-      createdAt: latestTestResult.createdAt, // Tambahkan ini ke output
+      pageScores,
+      createdAt: latestTestResult.createdAt,
     };
   } catch (error) {
     console.error('Error fetching test result:', error);

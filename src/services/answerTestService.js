@@ -135,6 +135,99 @@ export const updateDraftAnswer = async (resultId, oldOptionId, newOptionId, newA
 
 
 // Fungsi untuk mengirim jawaban final
+// export const submitFinalAnswers = async (resultId, token) => {
+//     let decodedToken;
+//     try {
+//         decodedToken = jwt.verify(token, JWT_SECRET);
+//     } catch (error) {
+//         console.error('Error saat memverifikasi token:', error);
+//         throw new Error('Token tidak valid atau sudah kadaluarsa');
+//     }
+
+//     const userId = decodedToken.id;
+
+//     try {
+//         console.log(`Processing submit for resultId: ${resultId}, userId: ${userId}`);
+
+//         // 1. Ambil entri result berdasarkan resultId
+//         const existingResult = await prismaClient.result.findUnique({
+//             where: { id: resultId },
+//             include: {
+//                 detail_result: {
+//                     where: { status: 'draft' },
+//                     include: {
+//                         option: {
+//                             include: { multiplechoice: { include: { option: true } } },
+//                         },
+//                     },
+//                 },
+//             },
+//         });
+
+//         // 2. Validasi apakah result ditemukan dan memiliki jawaban draft
+//         if (!existingResult) {
+//             console.warn(`Tidak ada result ditemukan untuk resultId: ${resultId}, userId: ${userId}`);
+//             throw new Error('Tidak ada result yang ditemukan.');
+//         }
+
+//         if (!existingResult.detail_result.length) {
+//             console.warn(`Tidak ada jawaban draft ditemukan untuk resultId: ${resultId}, userId: ${userId}`);
+//             throw new Error('Tidak ada jawaban draft yang ditemukan untuk result ini.');
+//         }
+
+//         let totalScore = 0;
+
+//         // 3. Proses setiap jawaban untuk menghitung skor
+//         const processedAnswers = existingResult.detail_result.map((draft) => {
+//             if (!draft.option || !draft.option.multiplechoice) {
+//                 console.error('Option atau MultipleChoice tidak ditemukan:', draft);
+//                 throw new Error('Option atau MultipleChoice tidak ditemukan untuk jawaban ini.');
+//             }
+
+//             const { multiplechoice } = draft.option;
+//             const correctOption = multiplechoice.option.find((opt) => opt.isCorrect);
+
+//             const isCorrect = correctOption && correctOption.id === draft.optionId;
+//             if (isCorrect) totalScore += multiplechoice.weight;
+
+//             return {
+//                 optionId: draft.optionId,
+//                 userAnswer: draft.userAnswer,
+//                 status: 'final',
+//                 isCorrect,
+//             };
+//         });
+
+//         // 4. Ubah status semua jawaban draft menjadi final
+//         await prismaClient.detail_result.updateMany({
+//             where: {
+//                 resultId: existingResult.id,
+//                 status: 'draft',
+//             },
+//             data: { status: 'final' },
+//         });
+
+//         // 5. Update skor pada entri result terkait
+//         const updatedResult = await prismaClient.result.update({
+//             where: { id: existingResult.id },
+//             data: { score: totalScore },
+//         });
+
+//         // 6. Tambahkan entri ke tabel History
+//         await prismaClient.history.create({
+//             data: {
+//                 testId: existingResult.testId,
+//                 userId,
+//             },
+//         });
+
+//         return updatedResult;
+//     } catch (error) {
+//         console.error('Gagal memproses submit jawaban final:', error);
+//         throw new Error(`Gagal mengirim jawaban final: ${error.message}`);
+//     }
+// };
+
 export const submitFinalAnswers = async (resultId, token) => {
     let decodedToken;
     try {
@@ -157,10 +250,17 @@ export const submitFinalAnswers = async (resultId, token) => {
                     where: { status: 'draft' },
                     include: {
                         option: {
-                            include: { multiplechoice: { include: { option: true } } },
+                            include: { 
+                                multiplechoice: {
+                                    include: {
+                                        option: true
+                                    }
+                                }
+                            },
                         },
                     },
                 },
+                test: true,
             },
         });
 
@@ -176,26 +276,43 @@ export const submitFinalAnswers = async (resultId, token) => {
         }
 
         let totalScore = 0;
+        let pageScores = {};
+        let correctAnswers = 0;
+        let incorrectAnswers = 0;
 
         // 3. Proses setiap jawaban untuk menghitung skor
-        const processedAnswers = existingResult.detail_result.map((draft) => {
+        existingResult.detail_result.forEach((draft) => {
             if (!draft.option || !draft.option.multiplechoice) {
                 console.error('Option atau MultipleChoice tidak ditemukan:', draft);
-                throw new Error('Option atau MultipleChoice tidak ditemukan untuk jawaban ini.');
+                return; // Skip this iteration
             }
 
-            const { multiplechoice } = draft.option;
-            const correctOption = multiplechoice.option.find((opt) => opt.isCorrect);
+            const { multiplechoice, points, isCorrect } = draft.option;
+            const pageName = multiplechoice.pageName;
+            
+            let questionScore = 0;
+            let isAnswerCorrect = false;
 
-            const isCorrect = correctOption && correctOption.id === draft.optionId;
-            if (isCorrect) totalScore += multiplechoice.weight;
+            if (!multiplechoice.isWeighted && multiplechoice.weight) {
+                questionScore = isCorrect ? multiplechoice.weight : 0;
+                isAnswerCorrect = isCorrect;
+            } else if (points !== null) {
+                questionScore = points;
+                const allPoints = multiplechoice.option.map(opt => opt.points || 0);
+                const maxPoints = Math.max(...allPoints);
+                isAnswerCorrect = points === maxPoints;
+            }
 
-            return {
-                optionId: draft.optionId,
-                userAnswer: draft.userAnswer,
-                status: 'final',
-                isCorrect,
-            };
+            // Tambahkan skor ke total dan skor halaman
+            totalScore += questionScore;
+            pageScores[pageName] = (pageScores[pageName] || 0) + questionScore;
+
+            // Hitung jawaban benar dan salah
+            if (isAnswerCorrect) {
+                correctAnswers++;
+            } else {
+                incorrectAnswers++;
+            }
         });
 
         // 4. Ubah status semua jawaban draft menjadi final
@@ -210,7 +327,9 @@ export const submitFinalAnswers = async (resultId, token) => {
         // 5. Update skor pada entri result terkait
         const updatedResult = await prismaClient.result.update({
             where: { id: existingResult.id },
-            data: { score: totalScore },
+            data: { 
+                score: totalScore,
+            },
         });
 
         // 6. Tambahkan entri ke tabel History
@@ -221,14 +340,18 @@ export const submitFinalAnswers = async (resultId, token) => {
             },
         });
 
-        return updatedResult;
+        return {
+            ...updatedResult,
+            pageScores,
+            correctAnswers,
+            incorrectAnswers,
+            totalQuestions: correctAnswers + incorrectAnswers
+        };
     } catch (error) {
         console.error('Gagal memproses submit jawaban final:', error);
         throw new Error(`Gagal mengirim jawaban final: ${error.message}`);
     }
 };
-
-
 
 
 

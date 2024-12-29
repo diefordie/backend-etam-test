@@ -6,9 +6,12 @@ import {
   getAuthorByUserId,
   editAuthorProfileService,
   getAuthorDataService,
-  getTestsByAuthorService,
+  getNewestTestsByAuthorService,
+  getPopularTestsByAuthorService,
   searchTestsByTitleService,
   getAuthorById,
+  publishTestService,
+  deleteTestService
 } from "../services/authorServices.js";
 
 export const createAuthor = async (req, res) => {
@@ -30,7 +33,7 @@ export const createAuthor = async (req, res) => {
 export const editAuthor = async (req, res) => {
   try {
     const authorData = req.body;
-    const token = req.headers.authorization.split(" ")[1]; // Assuming Bearer token
+    const token = req.headers.authorization.split(" ")[1]; 
     const updatedAuthor = await editAuthorService(token, authorData);
     res.status(200).send({
       data: updatedAuthor,
@@ -78,7 +81,7 @@ export const editVerifiedAuthor = async (req, res) => {
 
 export const getAuthorProfile = async (req, res) => {
   try {
-    const token = req.headers.authorization.split(" ")[1]; // Assuming Bearer token
+    const token = req.headers.authorization.split(" ")[1]; 
     const authorProfile = await getAuthorByUserId(token);
     res.status(200).json(authorProfile);
   } catch (error) {
@@ -98,13 +101,13 @@ export const editAuthorProfile = async (req, res) => {
     }
 
     const { firstName, lastName, email, password } = req.body;
-    const file = req.file; // Asumsi menggunakan multer untuk handle file upload
+    const file = req.file; 
 
     const profileData = {
       firstName,
       lastName,
       email,
-      password: password || undefined, // Hanya kirim password jika ada
+      password: password || undefined, 
     };
 
     const updatedAuthor = await editAuthorProfileService(
@@ -138,11 +141,31 @@ export const getAuthorData = async (req, res) => {
   }
 };
 
-export const getTestsByAuthorController = async (req, res) => {
+export const getNewestTestsByAuthorController = async (req, res) => {
   try {
     const token = req.headers.authorization.split(" ")[1];
 
-    const tests = await getTestsByAuthorService(token);
+    const tests = await getNewestTestsByAuthorService(token);
+
+    res.status(200).json({
+      success: true,
+      message: "Tests retrieved successfully",
+      data: tests,
+    });
+  } catch (error) {
+    console.error("Error in getTestsByAuthorController:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to retrieve tests",
+    });
+  }
+};
+
+export const getPopularTestsByAuthorController = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(" ")[1];
+
+    const tests = await getPopularTestsByAuthorService(token);
 
     res.status(200).json({
       success: true,
@@ -181,7 +204,6 @@ export const searchTestsByTitleController = async (req, res) => {
 
 export const fetchAuthorById = async (req, res) => {
   try {
-    // Ambil user ID dari token yang sudah di-decode oleh middleware
     const userId = req.user.id
     console.log('Received userId from token:', userId)
 
@@ -214,3 +236,25 @@ export const fetchAuthorById = async (req, res) => {
     })
   }
 }
+
+export const publishTestController = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const result = await publishTestService(id);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error in publishTestController:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteTestController = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const result = await deleteTestService(id);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error in deleteTestController:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
