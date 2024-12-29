@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const createMultipleChoiceService = async (testId, questions) => {
+export const createMultipleChoiceService = async (testId, questions) => {
     console.log("testId:", testId);
     console.log("questions:", questions);
     
@@ -48,9 +48,9 @@ const createMultipleChoiceService = async (testId, questions) => {
     return multipleChoices;
 };
 
-export { createMultipleChoiceService };
 
-const updateMultipleChoiceService = async (multiplechoiceId, updatedData) => {
+
+export const updateMultipleChoiceService = async (multiplechoiceId, updatedData) => {
     const { 
         pageName, 
         question, 
@@ -120,7 +120,7 @@ const updateMultipleChoiceService = async (multiplechoiceId, updatedData) => {
     return updateMultipleChoice;
 };
 
-export { updateMultipleChoiceService };
+
 
 export const getMultipleChoiceByIdService = async (id) => {
     try {
@@ -257,19 +257,27 @@ export const updatePageNameForQuestion = async (questionNumber, pageName) => {
     }
   };
 
-const fetchMultipleChoiceByNumberAndTestId = async (testId, number, pageName) => {
-    return await prisma.multiplechoice.findFirst({
+export const fetchMultipleChoiceByNumberAndTestId = async (testId, number, pageName) => {
+    if (!testId || number === undefined) {
+        throw new Error('TestId and number are required');
+    }
+    
+    const query = {
         where: {
             testId: testId,
             number: number,
-            pageName: pageName,
         },
-    });
+    };
+
+    if (pageName) {
+        query.where.pageName = pageName;
+    }
+
+    return await prisma.multiplechoice.findFirst(query);
 };
 
-export {fetchMultipleChoiceByNumberAndTestId};
 
-const updateMultipleChoicePageNameService = async (testId, currentPageName, newPageName) => {
+export const updateMultipleChoicePageNameService = async (testId, currentPageName, newPageName) => {
     try {
       if (!prisma || !prisma.multiplechoice) {
         throw new Error('Prisma client not initialized properly');
@@ -300,21 +308,34 @@ const updateMultipleChoicePageNameService = async (testId, currentPageName, newP
     }
 };
   
-export { updateMultipleChoicePageNameService };
 
-const getPagesByTestIdService = async (testId) => {
-    return await prisma.multiplechoice.findMany({
-      where: { testId: testId },
-      select: {
-        number: true,
-        pageName: true,
-      },
-    });
-  };
+
+export const getPagesByTestIdService = async (testId) => {
+  try {
+      // Simple query to check if we can fetch any data
+      const anyMultiplechoice = await prisma.multiplechoice.findFirst();
+      
+
+      // Original query
+      const pages = await prisma.multiplechoice.findMany({
+          where: { testId: testId },
+          select: {
+              pageName: true,
+          },
+          distinct: ['pageName'],
+          orderBy: {
+              number: 'asc',
+          },
+      });
+
+      return pages.map(page => page.pageName);
+  } catch (error) {
+      console.error('Error in getPagesByTestIdService:', error);
+      throw error;
+  }
+};
   
-export { getPagesByTestIdService };
-
-const getQuestionNumbersServices = async (testId, category) => {
+export const getQuestionNumbersServices = async (testId, category) => {
     const result = await prisma.multiplechoice.findMany({
       where: {
         testId: testId,
@@ -328,7 +349,7 @@ const getQuestionNumbersServices = async (testId, category) => {
     return result.map((item) => item.number);
   };
 
-  const updateQuestionNumberServices = async (testId, oldNumber, newNumber) => {
+  export const updateQuestionNumberServices = async (testId, oldNumber, newNumber) => {
     console.log('Updating question numbers in database:');
     console.log(`testId: ${testId}, oldNumber: ${oldNumber}, newNumber: ${newNumber}`);
 
@@ -347,11 +368,6 @@ const getQuestionNumbersServices = async (testId, category) => {
     });
 
     console.log('Question numbers updated successfully');
-  };
-
-  export{
-    getQuestionNumbersServices,
-    updateQuestionNumberServices
   };
 
   export const deletePageService = async (testId, pageName) => {

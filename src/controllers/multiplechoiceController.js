@@ -29,7 +29,7 @@ initializeApp(firebaseConfig);
 //     return content.replace(oldUrl, newUrl);
 // };
 
-const createMultipleChoice = async (req, res) => {
+export const createMultipleChoice = async (req, res) => {
     try {
         const { testId, questions } = req.body;
 
@@ -69,7 +69,7 @@ const createMultipleChoice = async (req, res) => {
     }
 };
 
-export { createMultipleChoice }; 
+
 
 export const updateQuestionPageName = async (req, res) => {
     const { questionNumber, pageName } = req.body;
@@ -105,7 +105,7 @@ export const updateQuestionPageName = async (req, res) => {
     }
 };
 
-const updateMultipleChoice = async (req, res) => {
+export const updateMultipleChoice = async (req, res) => {
     try {
         const { multiplechoiceId } = req.params; 
         const updatedData = req.body; 
@@ -130,9 +130,8 @@ const updateMultipleChoice = async (req, res) => {
     }
 };
 
-export { updateMultipleChoice };
 
-const getMultipleChoiceById = async (req, res) => {
+export const getMultipleChoiceById = async (req, res) => {
     try {
         const { id } = req.params;  
         const multipleChoice = await getMultipleChoiceByIdService(id);
@@ -144,7 +143,7 @@ const getMultipleChoiceById = async (req, res) => {
     }
 };
 
-export { getMultipleChoiceById };
+
 
 export const deleteMultiplechoice = async (req, res) => {
   try {
@@ -214,26 +213,36 @@ export const updateQuestionNumberDel = async (req, res) => {
     }
 };
 
-const getMultipleChoiceByNumberAndTestId = async (req, res) => {
-    const { testId, number, pageName } = req.params;
+export const getMultipleChoiceByNumberAndTestId = async (req, res) => {
+  const { testId, number } = req.params;
+  const { pageName } = req.query; // Assuming pageName is sent as a query parameter
 
-    try {
-        const multipleChoice = await fetchMultipleChoiceByNumberAndTestId(testId, parseInt(number), pageName);
+  if (!testId || !number) {
+      return res.status(400).json({ message: 'TestId and number are required' });
+  }
 
-        if (!multipleChoice) {
-            return res.status(404).json({ message: 'Multiplechoice not found' });
-        }
+  try {
+      const parsedNumber = parseInt(number);
+      if (isNaN(parsedNumber)) {
+          return res.status(400).json({ message: 'Invalid number parameter' });
+      }
 
-        return res.json(multipleChoice);
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
+      const multipleChoice = await fetchMultipleChoiceByNumberAndTestId(testId, parsedNumber, pageName);
+
+      if (!multipleChoice) {
+          return res.status(404).json({ message: 'Multiplechoice not found' });
+      }
+
+      return res.json(multipleChoice);
+  } catch (error) {
+      console.error('Error in getMultipleChoiceByNumberAndTestId:', error);
+      return res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
 };
 
-export{ getMultipleChoiceByNumberAndTestId};
 
-const updateMultipleChoicePageNameController = async (req, res) => {
+
+export const updateMultipleChoicePageNameController = async (req, res) => {
     const { testId, pageIndex, currentPageName, newPageName } = req.body;
   
     try {
@@ -245,32 +254,33 @@ const updateMultipleChoicePageNameController = async (req, res) => {
     }
 };
 
-export {updateMultipleChoicePageNameController};
 
-const getPagesByTestIdController = async (req, res) => {
-    try {
-      const { testId } = req.query; 
-  
-      if (!testId) {
-        return res.status(400).json({ message: 'Test ID is required' });
-      }
-  
+
+export const getPagesByTestIdController = async (req, res) => {
+  const { testId } = req.params;
+
+  if (!testId) {
+      return res.status(400).json({ message: 'Test ID is required' });
+  }
+
+  try {
       const pages = await getPagesByTestIdService(testId);
-  
-      if (!pages.length) {
-        return res.status(404).json({ message: 'No pages found for this test ID' });
+
+      if (!pages || pages.length === 0) {
+          return res.status(404).json({ message: 'No pages found for this test ID' });
       }
-  
+
       return res.status(200).json({ pages });
-    } catch (error) {
+  } catch (error) {
       console.error('Error fetching pages:', error);
       return res.status(500).json({ message: 'Failed to fetch pages', error: error.message });
-    }
+  }
 };
-  
-export { getPagesByTestIdController };
 
-const getQuestionNumbers = async (req, res) => {
+  
+
+
+export const getQuestionNumbers = async (req, res) => {
     try {
       const { testId, category } = req.params;
       const questionNumbers = await getQuestionNumbersServices(testId, category);
@@ -280,7 +290,7 @@ const getQuestionNumbers = async (req, res) => {
     }
   };
   
-  const updateQuestionNumber = async (req, res) => {
+export const updateQuestionNumber = async (req, res) => {
     try {
       const { testId } = req.params;
       const { oldNumber, newNumber } = req.body;
@@ -297,10 +307,6 @@ const getQuestionNumbers = async (req, res) => {
     }
   };
   
-  export {
-    getQuestionNumbers,
-    updateQuestionNumber,
-  };
 
 export const deletePageController = async (req, res) => {
     try {
@@ -337,7 +343,7 @@ export const deletePageController = async (req, res) => {
     }
   };
 
-  export const updateNumberController = async (req, res) => {
+export const updateNumberController = async (req, res) => {
     try {
       const { testId, oldNumber, newNumber } = req.body;
   

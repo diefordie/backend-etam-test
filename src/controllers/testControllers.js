@@ -1,4 +1,4 @@
-import { createTestService, getTestService, getTestResult, getAuthorTestsService, getTestDetailById} from '../services/testServices.js'; // Pastikan menggunakan ekstensi .js
+import { createTestService, getTestService, getTestResult, getAuthorTestsService, getTestDetailById, publishTestService } from '../services/testServices.js'; // Pastikan menggunakan ekstensi .js
 
 const createTestController = async (req, res, next) => {
     const { authorId, type, category, title, testDescription } = req.body;
