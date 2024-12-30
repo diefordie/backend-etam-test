@@ -140,50 +140,55 @@ export const getMultipleChoiceByIdService = async (id) => {
 };
 
 export const deleteQuestionAndReorderNumbers = async (multiplechoiceId) => {
-    return await prisma.$transaction(async (tx) => {
-      const questionToDelete = await tx.multiplechoice.findUnique({
-        where: { id: multiplechoiceId },
-        select: { number: true, testId: true },
-      });
-  
-      if (!questionToDelete) {
-        throw new Error('Soal tidak ditemukan');
-      }
-  
-      console.log('Deleting question:', { id: multiplechoiceId, number: questionToDelete.number });
-  
-      // Hapus soal yang ditargetkan
-      await tx.multiplechoice.delete({
-        where: { id: multiplechoiceId },
-      });
-  
-      // Ambil soal yang perlu diperbarui
-      const questionsToUpdate = await tx.multiplechoice.findMany({
-        where: {
-          testId: questionToDelete.testId,
-          number: { gt: questionToDelete.number },
-        },
-        orderBy: { number: 'desc' },
-        select: { id: true, number: true },
-      });
-  
-      console.log('Questions to update:', questionsToUpdate);
-  
-      // Perbarui nomor setiap soal
-      const updates = [];
-      for (const question of questionsToUpdate) {
-        const newNumber = question.number - 1;
-        const result = await tx.multiplechoice.update({
-          where: { id: question.id }, 
-          data: { number: newNumber }
-        });      
-  
-        console.log(`Updated: ${question.id} from ${question.number} to ${newNumber}`);
-        updates.push(result);
-      }
-  
-      return updates;
+  return await prisma.$transaction(async (tx) => {
+    const questionToDelete = await tx.multiplechoice.findUnique({
+      where: { id: multiplechoiceId },
+      select: { id: true, number: true, testId: true },
     });
+
+    if (!questionToDelete) {
+      throw new Error('Soal tidak ditemukan');
+    }
+
+    console.log('Deleting question:', { id: multiplechoiceId, number: questionToDelete.number });
+
+    // Hapus opsi-opsi terkait terlebih dahulu
+    await tx.option.deleteMany({
+      where: { multiplechoiceId: multiplechoiceId },
+    });
+
+    // Hapus soal yang ditargetkan
+    await tx.multiplechoice.delete({
+      where: { id: multiplechoiceId },
+    });
+
+    // Ambil soal yang perlu diperbarui
+    const questionsToUpdate = await tx.multiplechoice.findMany({
+      where: {
+        testId: questionToDelete.testId,
+        number: { gt: questionToDelete.number },
+      },
+      orderBy: { number: 'asc' },
+      select: { id: true, number: true },
+    });
+
+    console.log('Questions to update:', questionsToUpdate);
+
+    // Perbarui nomor setiap soal
+    const updates = [];
+    for (const question of questionsToUpdate) {
+      const newNumber = question.number - 1;
+      const result = await tx.multiplechoice.update({
+        where: { id: question.id },
+        data: { number: newNumber },
+      });
+
+      console.log(`Updated: ${question.id} from ${question.number} to ${newNumber}`);
+      updates.push(result);
+    }
+
+    return updates;
+  });
 };
 
 export const updateQuestionNumber = async (testId, oldNumber, newNumber) => {
