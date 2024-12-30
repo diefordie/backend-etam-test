@@ -83,7 +83,7 @@ const publishTestController = async (req, res, next) => {
     const { price, similarity, worktime } = req.body;
 
     // Validasi input
-    if (!price || !similarity || !worktime) {
+    if (price === undefined || !similarity || !worktime) {
         const error = new Error('Semua field harus diisi untuk publikasi.');
         error.status = 400; 
         return next(error);
@@ -95,7 +95,7 @@ const publishTestController = async (req, res, next) => {
             price, 
             similarity, 
             worktime, 
-            isPublished: true // Ganti isPublish menjadi isPublished
+            isPublished: true 
         });
         res.status(200).json(updatedTest); 
     } catch (error) {
