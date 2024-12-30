@@ -13,7 +13,9 @@ import {
     updateMultipleChoicePageNameController,
     getPagesByTestIdController,
     deletePageController,
-    updateNumberController
+    updateNumberController,
+    getPreviousQuestion,
+    deleteOption
 } from '../controllers/multiplechoiceController.js';
 import multer from 'multer';
 
@@ -24,6 +26,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.get('/getQuestionNumbers', getQuestionNumbers);
 router.get('/get-pages/:testId', getPagesByTestIdController);
 router.get('/question/:id', getMultipleChoiceById);
+router.get('/previous-question/:testId/:number', getPreviousQuestion);
 
 // POST routes
 router.post('/add-questions', upload.array('questionPhoto'), (req, res) => {
@@ -48,6 +51,7 @@ router.put('/:testId/questions/:oldNumber', updateQuestionNumberPage);
 // DELETE routes
 router.delete('/question/:multiplechoiceId', deleteMultiplechoice);
 router.delete('/delete-page', deletePageController);
+router.delete('/option/:optionId', deleteOption);
 
 // More general routes last
 router.get('/:testId/:number', getMultipleChoiceByNumberAndTestId);

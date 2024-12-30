@@ -421,3 +421,79 @@ export const updateNumberServices = async (testId, oldNumber, newNumber) => {
   
     console.log('Question number updated successfully');
 };
+
+export const findPreviousQuestion = async (testId, number) => {
+  return await prisma.$transaction(async (tx) => {
+    const previousQuestion = await tx.multiplechoice.findFirst({
+      where: {
+        testId: testId,
+        number: { lt: parseInt(number, 10) },
+      },
+      orderBy: { number: 'desc' },
+    });
+    if (!previousQuestion) {
+      throw new Error('Tidak ditemukan soal dengan nomor lebih kecil.');
+    }
+    const questionsToUpdate = await tx.multiplechoice.findMany({
+      where: {
+        testId: testId,
+        number: { gt: previousQuestion.number },
+      },
+      orderBy: { number: 'asc' },
+    });
+    const updates = [];
+    for (const question of questionsToUpdate) {
+      const newNumber = question.number - 1;
+      const updatedQuestion = await tx.multiplechoice.update({
+        where: { id: question.id },
+        data: { number: newNumber },
+      });
+      updates.push(updatedQuestion);
+    }
+    return {
+      multiplechoiceId: previousQuestion.id,
+      updatedQuestions: updates,
+    };
+  });
+};
+
+export const deleteOptionAndReorder = async (optionId) => {
+  return await prisma.$transaction(async (tx) => {
+    const optionToDelete = await tx.option.findUnique({
+      where: { id: optionId },
+      include: {
+        multiplechoice: true
+      }
+    });
+
+    if (!optionToDelete) {
+      throw new Error('Option not found');
+    }
+
+    await tx.option.delete({
+      where: { id: optionId }
+    });
+
+    const remainingOptions = await tx.option.findMany({
+      where: {
+        multiplechoiceId: optionToDelete.multiplechoiceId
+      },
+      orderBy: {
+        id: 'asc'
+      }
+    });
+
+    const hasCorrectOption = remainingOptions.some(option => option.isCorrect);
+    if (!hasCorrectOption && optionToDelete.isCorrect && remainingOptions.length > 0) {
+      await tx.option.update({
+        where: { id: remainingOptions[0].id },
+        data: { isCorrect: true }
+      });
+    }
+
+    return {
+      deletedOption: optionToDelete,
+      remainingCount: remainingOptions.length
+    };
+  });
+};

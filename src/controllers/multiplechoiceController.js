@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { initializeApp } from 'firebase/app';
-import { updateQuestionNumberService,  updatePageNameForQuestion, createMultipleChoiceService, updateMultipleChoiceService, getQuestionNumbersServices, updateQuestionNumberServices, getMultipleChoiceByIdService, deleteQuestionAndReorderNumbers,  fetchMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameService, getPagesByTestIdService, deletePageService, updateNumberServices } from '../services/multiplechoiceSevice.js'; 
+import { updateQuestionNumberService,  updatePageNameForQuestion, createMultipleChoiceService, updateMultipleChoiceService, getQuestionNumbersServices, updateQuestionNumberServices, getMultipleChoiceByIdService, deleteQuestionAndReorderNumbers,  fetchMultipleChoiceByNumberAndTestId, updateMultipleChoicePageNameService, getPagesByTestIdService, deletePageService, updateNumberServices, findPreviousQuestion, deleteOptionAndReorder } from '../services/multiplechoiceSevice.js'; 
 import { Buffer } from 'buffer';
 import * as multiplechoiceService from '../services/multiplechoiceSevice.js';
 import { uploadFileToStorage } from '../../firebase/firebaseBucket.js';
@@ -369,3 +369,51 @@ export const updateNumberController = async (req, res) => {
     }
   };
   
+
+  export const getPreviousQuestion = async (req, res) => {
+    const { testId, number } = req.params;
+    try {
+      const question = await findPreviousQuestion(testId, number);
+      if (!question) {
+        return res.status(404).json({ message: 'Soal sebelumnya tidak ditemukan' });
+      }
+      res.json({ multiplechoiceId: question.id });
+    } catch (error) {
+      console.error('Error fetching previous question:', error);
+      res.status(500).json({ message: 'Terjadi kesalahan saat mencari soal sebelumnya' });
+    }
+  };
+
+
+
+  export const deleteOption = async (req, res) => {
+      try {
+        const { optionId } = req.params;
+    
+        const result = await deleteOptionAndReorder(optionId);
+    
+        if (result.remainingCount < 2) {
+          return res.status(200).json({
+            message: 'Option deleted successfully',
+            warning: 'Question should have at least two options',
+            remainingCount: result.remainingCount
+          });
+        }
+    
+        res.status(200).json({
+          message: 'Option deleted successfully',
+          remainingCount: result.remainingCount
+        });
+      } catch (error) {
+        console.error('Error in deleteOption:', error);
+        
+        if (error.message === 'Option not found') {
+          return res.status(404).json({ message: 'Option not found' });
+        }
+        
+        res.status(500).json({ 
+          message: 'Failed to delete option',
+          error: error.message 
+        });
+      }
+    };
