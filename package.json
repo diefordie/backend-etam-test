@@ -36,6 +36,7 @@
     "pdfmake": "0.1.53",
     "pg": "^8.13.0",
     "punycode": "^2.3.1",
+    "sanitize-html": "^2.14.0",
     "scrypt-kdf": "^3.0.0"
   },
   "devDependencies": {
