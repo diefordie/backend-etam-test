@@ -216,8 +216,9 @@ model Withdrawal {
   accountNumber String     
   accountName   String         
   reference     String?         
-  notes         String?        
+  notes         String?
+  status        String          @default("queued") // Add this field        
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  author        Author          @relation(fields: [authorId], references: [id])
+  author        Author          @relation(fields: [authorId], references: [id])
 }
